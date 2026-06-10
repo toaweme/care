@@ -1,0 +1,233 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    # correctness / bugs
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - durationcheck
+    - errname        # ErrXxx vars / XxxError types naming convention
+    - errorlint
+    - fatcontext     # context repeatedly nested inside a loop
+    - gocheckcompilerdirectives
+    - intrange        # for i := range n (Go 1.22+)
+    - loggercheck     # slog/zap key-value pair correctness
+    - nilnil          # catches return nil, nil from (T, error)
+    - noctx
+    - predeclared
+    - reassign
+    - rowserrcheck
+    - sqlclosecheck
+    - exhaustive
+
+    # security
+    - gosec
+
+    # tests
+    - testableexamples
+    - thelper
+    - usetesting     # t.Setenv/t.TempDir/t.Context over os.* and context.Background in tests
+
+    # style / readability
+    - asasalint
+    - asciicheck
+    - dogsled
+    - dupword
+    - forbidigo
+    - gocritic
+    - iface         # redundant/unused interface patterns (successor to interfacer)
+    - misspell
+    - nolintlint
+    - perfsprint
+    - revive
+    - sloglint
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+    errorlint:
+      errorf: true
+      errorf-multi: true
+      asserts: true
+      comparison: true
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    forbidigo:
+      analyze-types: true
+      forbid:
+        # org rule: never use em-dash or en-dash in source
+        - pattern: '\x{2014}'
+          msg: "em-dash is forbidden; use ASCII hyphen, comma, colon, or split the sentence"
+        - pattern: '\x{2013}'
+          msg: "en-dash is forbidden; use ASCII hyphen"
+        - pattern: '^print$|^println$'
+          msg: "use fmt or log instead of built-in print/println"
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - ifElseChain
+        - hugeParam
+        - rangeValCopy
+        - paramTypeCombine
+        - commentedOutCode
+        - whyNoLint
+        - unnamedResult
+        - emptyStringTest
+        - appendAssign
+        - evalOrder
+        - octalLiteral
+
+    gosec:
+      excludes:
+        - G104   # unhandled errors - covered by errcheck
+        - G115   # integer overflow on conversion - too noisy, false-positive heavy
+        # G204 (subprocess from variable) and G306 (file perms) are NOT excluded
+        # globally; suppress at the call site with `//nolint:gosec // <reason>`
+        # so every exception is documented (nolintlint enforces explanations).
+      config:
+        global:
+          audit: true
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+
+    misspell:
+      locale: US
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    revive:
+      severity: warning
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+          disabled: true
+        - name: var-declaration
+        - name: var-naming
+
+    perfsprint:
+      int-conversion: true
+      err-error: true
+      errorf: true
+      sprintf1: true
+      strconcat: true
+
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: false
+      no-global: ""
+      context: ""
+      static-msg: false
+      key-naming-case: snake
+      args-on-sep-lines: false
+
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1020
+        - -ST1021
+        - -ST1022
+
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+          - dupword
+          - forbidigo
+          - noctx
+          - revive   # don't demand exported doc comments on test helpers
+      - path: examples/
+        linters:
+          - gosec
+          - forbidigo
+          - revive   # examples are illustrative; skip doc-comment rigor
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - __MODULE__
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+  sort-order:
+    - file
+    - linter

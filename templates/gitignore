@@ -1,0 +1,11 @@
+.idea
+.vscode
+.DS_Store
+.env
+go.work
+go.work.sum
+
+/bin/
+**/bin/
+
+README.coverage.md

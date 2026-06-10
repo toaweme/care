@@ -1,0 +1,24 @@
+version: "3"
+
+# canonical root taskfile for single-module Go binary projects.
+# the `includes:` block is managed by `tool sync` (and `tool taskfile fix`):
+# any taskfile.*.yml at the repo root is auto-included, keyed by its middle
+# segment. BINARY_NAME and BUILD_PATH are templated in by `tool sync`.
+
+includes:
+  run:
+    taskfile: ./taskfile.run.yml
+    flatten: true
+    vars:
+      BINARY_NAME: __BINARY_NAME__
+      BUILD_PATH: __BUILD_PATH__
+  test:
+    taskfile: ./taskfile.test.yml
+    flatten: true
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list-all --json | tool tasks
