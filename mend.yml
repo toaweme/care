@@ -1,0 +1,46 @@
+# mend configuration. Loaded from ~/.mend/mend.yml (global) then ./mend.yml
+# (project); the project file wins field by field. Every block is optional;
+# omit one to keep the built-in defaults.
+
+# Base directory that repository groups are resolved against.
+# root: ~/Code/golang/src
+
+# Provision missing tool binaries automatically when a command needs them.
+auto_install: true
+
+# Named sets of repositories so a command can target several at once. Paths are
+# resolved relative to `root`.
+# groups:
+#   open-source:
+#     - github.com/toaweme/cli
+#     - github.com/toaweme/log
+
+# Configure individual checks by their registered name: disable one, or pass it
+# options the check understands. Disable-able checks:
+#   git.clean, gomod.tidy, gomod.noreplace, lint.golangci, configs.sync,
+#   sec.secrets, sec.vuln
+checks:
+  # git.clean:
+  #   disabled: true
+  sec.secrets:
+    options:
+      history: false   # "true" scans full git history, "false" only the working tree
+  sec.vuln:
+    options:
+      db: ""             # GOVULNDB override (e.g. a local mirror); empty uses the default
+
+# Override the managed-file matrix written into repos. Left unset, mend seeds it
+# from the Go ecosystem defaults. Lists are by repo kind (common applies to all;
+# binary/library add on top). Each entry: src, dst, strategy
+# (overwrite | merge | create_only | taskfile).
+# files:
+#   common:
+#     - { src: golangci.yml, dst: .golangci.yml, strategy: overwrite }
+
+# Pin a version or disable a tool binary by name. Install coordinates (brew
+# formula, go import path) live in code, not here.
+# tools:
+#   golangci-lint:
+#     version: v2.1.0
+#   betterleaks:
+#     disabled: true
