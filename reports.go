@@ -366,14 +366,24 @@ type BenchReport struct {
 	Benchmarks []BenchResult `json:"benchmarks,omitempty"`
 }
 
-// BenchResult is one benchmark's result.
+// BenchResult is one benchmark's result. Ns/Bytes/Allocs are the standard columns
+// `go test -benchmem` always emits; Extra carries any further columns the same line
+// reports (MB/s from b.SetBytes, custom units from b.ReportMetric), in output order.
 type BenchResult struct {
-	Name        string  `json:"name"`
-	Package     string  `json:"package,omitempty"`
-	Runs        int     `json:"runs,omitempty"`
-	NsPerOp     float64 `json:"ns_per_op,omitempty"`
-	BytesPerOp  int     `json:"bytes_per_op,omitempty"`
-	AllocsPerOp int     `json:"allocs_per_op,omitempty"`
+	Name        string        `json:"name"`
+	Package     string        `json:"package,omitempty"`
+	Runs        int           `json:"runs,omitempty"`
+	NsPerOp     float64       `json:"ns_per_op,omitempty"`
+	BytesPerOp  int           `json:"bytes_per_op,omitempty"`
+	AllocsPerOp int           `json:"allocs_per_op,omitempty"`
+	Extra       []BenchMetric `json:"extra,omitempty"`
+}
+
+// BenchMetric is one non-standard benchmark column: a value and its unit, as the
+// benchmark emitted it (e.g. SetBytes throughput "MB/s", a ReportMetric custom unit).
+type BenchMetric struct {
+	Unit  string  `json:"unit"`
+	Value float64 `json:"value"`
 }
 
 func (r BenchReport) Summary(int) string {
@@ -396,6 +406,9 @@ func (r BenchReport) Rows(int) [][]string {
 		}
 		if b.AllocsPerOp > 0 {
 			parts = append(parts, fmt.Sprintf("%d allocs/op", b.AllocsPerOp))
+		}
+		for _, m := range b.Extra {
+			parts = append(parts, fmt.Sprintf("%g %s", m.Value, m.Unit))
 		}
 		rows = append(rows, []string{name, strings.Join(parts, "  ")})
 	}

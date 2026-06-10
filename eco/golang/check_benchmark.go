@@ -131,6 +131,13 @@ func parseBenchOutput(out []byte) []mend.BenchResult {
 				res.BytesPerOp, _ = strconv.Atoi(val)
 			case "allocs/op":
 				res.AllocsPerOp, _ = strconv.Atoi(val)
+			default:
+				// MB/s (b.SetBytes) and custom b.ReportMetric units ride the same
+				// line; keep them rather than drop them, since mend is general-purpose
+				// and a given repo's benchmarks may report any of them.
+				if v, err := strconv.ParseFloat(val, 64); err == nil {
+					res.Extra = append(res.Extra, mend.BenchMetric{Unit: unit, Value: v})
+				}
 			}
 		}
 		results = append(results, res)
