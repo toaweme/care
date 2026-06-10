@@ -1,10 +1,10 @@
 package golang
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/toaweme/mend"
 )
@@ -53,7 +53,18 @@ func (f *golangciLint) Run(ctx context.Context, dir string, opts mend.RunOptions
 	if !hasCfg {
 		return mend.Skip[mend.QualityReport]("no .golangci.yml")
 	}
-	args := []string{"run", "--output.json.path", "stdout"}
+	// golangci-lint v2 emits the default text formatter to stdout alongside any
+	// JSON formatter, so JSON on stdout is interleaved with code snippets. Route
+	// the JSON report into its own file to keep it clean; stdout/stderr then carry
+	// only human-readable text we surface if the run fails for a non-lint reason.
+	report, err := os.CreateTemp("", "mend-golangci-*.json")
+	if err != nil {
+		return mend.Errored[mend.QualityReport]("tool failed", fmt.Errorf("failed to create golangci-lint report file: %w", err))
+	}
+	defer os.Remove(report.Name())
+	report.Close()
+
+	args := []string{"run", "--output.json.path", report.Name()}
 	if opts.Quality.Fix {
 		args = append(args, "--fix")
 	}
@@ -62,16 +73,16 @@ func (f *golangciLint) Run(ctx context.Context, dir string, opts mend.RunOptions
 	if err == nil {
 		return mend.Pass(mend.QualityReport{})
 	}
-	issues := parseGolangciJSON(out)
+	issues := parseGolangciJSON(report.Name())
 	if len(issues) == 0 {
-		return mend.Errored[mend.QualityReport]("tool failed", fmt.Errorf("failed to run golangci-lint: %w", err))
+		return mend.Errored[mend.QualityReport]("tool failed", fmt.Errorf("failed to run golangci-lint: %w\n%s", err, trimOutput(out)))
 	}
 	return mend.Fail(mend.QualityReport{Issues: issues})
 }
 
-func parseGolangciJSON(out []byte) []mend.QualityIssue {
-	start := bytes.IndexByte(out, '{')
-	if start < 0 {
+func parseGolangciJSON(path string) []mend.QualityIssue {
+	data, err := os.ReadFile(path)
+	if err != nil {
 		return nil
 	}
 	var parsed struct {
@@ -86,7 +97,7 @@ func parseGolangciJSON(out []byte) []mend.QualityIssue {
 			} `json:"Pos"`
 		} `json:"Issues"`
 	}
-	if err := json.NewDecoder(bytes.NewReader(out[start:])).Decode(&parsed); err != nil {
+	if err := json.Unmarshal(data, &parsed); err != nil {
 		return nil
 	}
 	issues := make([]mend.QualityIssue, 0, len(parsed.Issues))

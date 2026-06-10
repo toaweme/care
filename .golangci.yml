@@ -215,7 +215,8 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - __MODULE__
+        - github.com/toaweme
+        - github.com/awee-ai
 
 issues:
   max-issues-per-linter: 0

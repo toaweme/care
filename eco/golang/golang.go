@@ -36,18 +36,8 @@ var golangciConfigNames = []string{".golangci.yml", ".golangci.yaml", ".golangci
 // to the filesystem root, since a config placed at the repo root governs nested
 // module dirs too.
 func hasGolangciConfig(dir string) bool {
-	for {
-		for _, name := range golangciConfigNames {
-			if fileExists(filepath.Join(dir, name)) {
-				return true
-			}
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return false
-		}
-		dir = parent
-	}
+	_, found := FindGolangciConfig(dir)
+	return found
 }
 
 // firstLine returns the first non-empty line of tool output, trimmed, or a default

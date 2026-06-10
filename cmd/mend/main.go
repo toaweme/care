@@ -87,6 +87,10 @@ func run(cwd string, args []string) error {
 	app.Default(statusCommand)
 	app.Add("status", statusCommand)
 
+	setupCommand := NewSetupCommand()
+	app.Add("setup", setupCommand)
+	setupCommand.Add("lint", NewSetupLintCommand(golang.ModulePath))
+
 	if err := app.Run(args); cli.IsRealError(err) {
 		return err
 	}
