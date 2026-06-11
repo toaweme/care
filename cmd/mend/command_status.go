@@ -107,6 +107,7 @@ func mapEcosystemConfigs(in StatusFlags) (mend.EcosystemConfig, mend.RunOptions)
 		Format:          in.Quality,
 		Quality:         in.Quality,
 		Dependencies:    in.Quality,
+		Runtime:         in.Quality,
 		Docs:            in.Quality,
 		Tests:           in.Tests || in.Coverage,
 		Benchmark:       in.Bench,
@@ -117,7 +118,7 @@ func mapEcosystemConfigs(in StatusFlags) (mend.EcosystemConfig, mend.RunOptions)
 	if !in.Git && !in.Quality && !in.Tests && !in.Coverage && !in.Security && !in.Bench {
 		cfg = mend.EcosystemConfig{
 			VersionControl: true,
-			Build:          true, Vet: true, Format: true, Quality: true, Dependencies: true, Docs: true,
+			Build:          true, Vet: true, Format: true, Quality: true, Dependencies: true, Runtime: true, Docs: true,
 			Tests: true, Benchmark: true,
 			Secrets: true, Vulnerabilities: true,
 		}
@@ -143,6 +144,7 @@ func applyDisabled(cfg *mend.EcosystemConfig, disabled func(feature string) bool
 		mend.FeatureFormat:          &cfg.Format,
 		mend.FeatureLint:            &cfg.Quality,
 		mend.FeatureDependencies:    &cfg.Dependencies,
+		mend.FeatureRuntime:         &cfg.Runtime,
 		mend.FeatureDocs:            &cfg.Docs,
 		mend.FeatureTests:           &cfg.Tests,
 		mend.FeatureBenchmark:       &cfg.Benchmark,

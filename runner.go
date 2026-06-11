@@ -59,8 +59,13 @@ func (r *runner) Run(ctx context.Context, tasks []Task, dir string, opts RunOpti
 	for _, t := range tasks {
 		if !t.Applies(dir) {
 			skips = append(skips, simpleOutput{
-				phase: PhaseRun, feature: t.Feature(), check: t.Name(), profile: t.Profile(),
-				dir: dir, status: StatusSkip, note: "not applicable",
+				phase:   PhaseRun,
+				feature: t.Feature(),
+				check:   t.Name(),
+				profile: t.Profile(),
+				dir:     dir,
+				status:  StatusSkip,
+				note:    "not applicable",
 			})
 			continue
 		}

@@ -71,6 +71,7 @@ func run(cwd string, args []string) error {
 		Format:          golang.NewFormat(gofmt),
 		Quality:         golang.NewGolangciLint(golangci, gotool),
 		Dependencies:    golang.NewGoMod(gotool),
+		Runtime:         golang.NewRuntime(gotool, golang.RuntimeWarn),
 		Docs:            golang.NewDocs(floatOption(cfg, "docs", "min")),
 		Tests:           golang.NewTests(gotool, cfg.Profiles.Tests),
 		Benchmark:       golang.NewBenchmark(gotool, cfg.Profiles.Bench),

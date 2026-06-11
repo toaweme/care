@@ -20,8 +20,9 @@ var _ mend.Dependencies = (*goModCheck)(nil)
 
 // NewGoMod is the Dependencies feature for Go: it reports whether `go mod tidy`
 // would change go.mod/go.sum and any replace directives present, as one rolled-up
-// result. In fix mode (DepsRunOptions.Fix) it applies `go mod tidy` for real
-// instead of running the non-mutating tidy check.
+// result. In fix mode (DepsRunOptions.Fix) it applies `go mod tidy` for real instead
+// of running the non-mutating tidy check. (The go/toolchain directive minimality
+// check is a separate feature, NewRuntime.)
 func NewGoMod(tool mend.Tool) mend.Dependencies {
 	return &goModCheck{BaseCheck: mend.NewBaseCheck("go-mod", tool), tool: tool}
 }

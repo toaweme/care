@@ -35,6 +35,7 @@ const (
 	FeatureFormat          = "format"
 	FeatureLint            = "lint"
 	FeatureDependencies    = "dependencies"
+	FeatureRuntime         = "runtime"
 	FeatureDocs            = "docs"
 	FeatureTests           = "tests"
 	FeatureBenchmark       = "benchmarks"
@@ -128,6 +129,7 @@ type (
 	Format          = Check[FormatReport]
 	Quality         = Check[QualityReport]
 	Dependencies    = Check[DepsReport]
+	Runtime         = Check[RuntimeReport]
 	Docs            = Check[DocsReport]
 	Tests           = Check[TestReport]
 	Benchmark       = Check[BenchReport]

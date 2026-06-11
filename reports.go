@@ -129,6 +129,89 @@ func (r DepsReport) Rows(int) [][]string {
 	return rows
 }
 
+// RuntimeReport is the supported runtime/language-version range of a module: the
+// version constraint it declares (Go's `go` directive, Node's engines, Python's
+// requires-python) versus the range its code and dependencies actually allow. The
+// model carries both bounds because a language can have either or both: Go is
+// backwards-compatible so only Minimum is meaningful (Maximum stays empty,
+// unbounded), whereas a language that removes features also has a Maximum the code
+// can still run on. It is language-agnostic; an ecosystem fills what applies.
+type RuntimeReport struct {
+	Declared string `json:"declared"`
+
+	// Minimum is the lowest version the module could declare: max(CodeMin, DepMin).
+	// Maximum is the highest its code can still run on, or empty when unbounded (Go).
+	Minimum string `json:"minimum,omitempty"`
+	Maximum string `json:"maximum,omitempty"`
+	// Reducible is true when Declared is above Minimum and we can prove it (used to
+	// flag a non-minimal floor); ExceedsMax flags a Declared above a real ceiling.
+	Reducible  bool `json:"reducible"`
+	ExceedsMax bool `json:"exceeds_max,omitempty"`
+
+	CodeMin    string `json:"code_min,omitempty"`
+	CodeReason string `json:"code_reason,omitempty"`
+	CodeMax    string `json:"code_max,omitempty"`
+	DepMin     string `json:"dep_min,omitempty"`
+	DepModule  string `json:"dep_module,omitempty"`
+
+	CacheComplete bool         `json:"cache_complete"`
+	Toolchain     string       `json:"toolchain,omitempty"`
+	ToolchainNote string       `json:"toolchain_note,omitempty"`
+	Deps          []RuntimeDep `json:"deps,omitempty"`
+}
+
+// RuntimeDep is one dependency's identity and the runtime version it declares.
+type RuntimeDep struct {
+	Module  string `json:"module"`
+	Version string `json:"version"`
+	Min     string `json:"min,omitempty"` // the dep's own declared runtime version
+}
+
+func (r RuntimeReport) Summary(int) string {
+	head := r.Declared
+	switch {
+	case r.Reducible && r.Minimum != "":
+		head = r.Declared + ", can drop to " + r.Minimum
+	case r.CacheComplete && r.Minimum != "" && r.Minimum == r.Declared:
+		head = r.Declared + ", minimal"
+	}
+	var parts []string
+	if r.CodeMin != "" {
+		parts = append(parts, "code "+r.CodeMin)
+	}
+	if r.DepMin != "" {
+		dep := "deps " + r.DepMin
+		if r.DepModule != "" {
+			dep += " (" + r.DepModule + ")"
+		}
+		if !r.CacheComplete {
+			dep += " [partial cache]"
+		}
+		parts = append(parts, dep)
+	}
+	if r.Maximum != "" {
+		parts = append(parts, "max "+r.Maximum)
+	}
+	if r.ToolchainNote != "" {
+		parts = append(parts, "toolchain "+r.Toolchain+" "+r.ToolchainNote)
+	}
+	if len(parts) == 0 {
+		return head
+	}
+	return head + " · " + strings.Join(parts, " · ")
+}
+
+func (r RuntimeReport) Rows(verbosity int) [][]string {
+	if verbosity < 2 {
+		return nil
+	}
+	rows := make([][]string, 0, len(r.Deps))
+	for _, d := range r.Deps {
+		rows = append(rows, []string{d.Module, d.Version, d.Min})
+	}
+	return rows
+}
+
 // TestReport is the structured result of a test run: per-suite and per-test
 // outcomes plus aggregate coverage.
 type TestReport struct {

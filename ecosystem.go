@@ -13,6 +13,7 @@ type Ecosystem struct {
 	Format          Format
 	Quality         Quality
 	Dependencies    Dependencies
+	Runtime         Runtime
 	Docs            Docs
 	Tests           Tests
 	Benchmark       Benchmark
@@ -32,6 +33,7 @@ type EcosystemConfig struct {
 	Format          bool
 	Quality         bool
 	Dependencies    bool
+	Runtime         bool
 	Docs            bool
 	Tests           bool
 	Benchmark       bool
@@ -68,6 +70,9 @@ func (e *Ecosystem) Tasks(s EcosystemConfig) []Task {
 	}
 	if s.Dependencies && e.Dependencies != nil {
 		tasks = append(tasks, newTask(FeatureDependencies, e.Dependencies))
+	}
+	if s.Runtime && e.Runtime != nil {
+		tasks = append(tasks, newTask(FeatureRuntime, e.Runtime))
 	}
 	if s.Docs && e.Docs != nil {
 		tasks = append(tasks, newTask(FeatureDocs, e.Docs))

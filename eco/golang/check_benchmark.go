@@ -4,7 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,7 +42,46 @@ func NewBenchmark(tool mend.Tool, profiles []mend.RunProfile) mend.Benchmark {
 	return &benchmarkCheck{BaseCheck: mend.NewBaseCheck("go-test-bench", tool), tool: tool, profiles: profiles}
 }
 
-func (f *benchmarkCheck) Applies(dir string) bool { return hasGoMod(dir) }
+// Applies skips a repo with no benchmark functions outright, since `go test -bench`
+// otherwise compiles every test binary just to discover there is nothing to run -
+// which would bill a multi-second SKIP. It detects benchmarks by a cheap source
+// scan (no compilation) rather than running the tool.
+func (f *benchmarkCheck) Applies(dir string) bool {
+	return hasGoMod(dir) && hasBenchmarks(dir)
+}
+
+// benchFuncRe matches a top-level benchmark function declaration. Benchmarks must be
+// `func BenchmarkXxx(...)` at file scope, so anchoring to the start of a line keeps
+// occurrences in comments or strings (which are indented) from matching.
+var benchFuncRe = regexp.MustCompile(`(?m)^func Benchmark`)
+
+// errStopWalk halts the directory walk as soon as the first benchmark is found.
+var errStopWalk = errors.New("benchmark found")
+
+// hasBenchmarks reports whether any _test.go file under dir declares a benchmark,
+// walking the tree (skipping vendor/testdata and dot dirs) and stopping at the first
+// hit. It reads files but never compiles, so it is cheap even on a large module.
+func hasBenchmarks(dir string) bool {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil //nolint:nilerr // an unreadable entry just isn't a benchmark
+		}
+		if d.IsDir() {
+			if name := d.Name(); path != dir && (name == "vendor" || name == "testdata" || strings.HasPrefix(name, ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		if b, err := os.ReadFile(path); err == nil && benchFuncRe.Match(b) {
+			return errStopWalk
+		}
+		return nil
+	})
+	return errors.Is(err, errStopWalk)
+}
 
 // Profiles returns the configured benchmark profiles, or a single default.
 func (f *benchmarkCheck) Profiles() []mend.RunProfile {

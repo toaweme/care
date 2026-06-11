@@ -44,20 +44,18 @@ func Test_FlatBlock_Alignment(t *testing.T) {
 		{"./templates", "SKIP"},
 	}
 	got := capture(t, func() {
-		NewPretty().FlatBlock("✓", "check.test", 14, rows, 0)
+		NewPretty().ItemRows(rows)
 	})
 	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
 	if len(lines) != 3 {
-		t.Fatalf("expected 3 lines, got %d: %q", len(lines), got)
+		t.Fatalf("expected 3 rows, got %d: %q", len(lines), got)
 	}
-	// the content column starts at labelWidth+4; the first row sits on the spine,
-	// the rest align beneath it, so the item key starts at the same column.
-	const contentCol = 14 + 4
-	if got := runeCol(lines[0], "root"); got != contentCol {
-		t.Errorf("row 0 key column = %d, want %d (%q)", got, contentCol, lines[0])
+	// item rows are indented a small fixed amount (not aligned to a wide label column).
+	if got := runeCol(lines[0], "root"); got != subRowIndent {
+		t.Errorf("row key column = %d, want %d (%q)", got, subRowIndent, lines[0])
 	}
-	if got := runeCol(lines[1], "./internal"); got != contentCol {
-		t.Errorf("row 1 key column = %d, want %d (%q)", got, contentCol, lines[1])
+	if got := runeCol(lines[1], "./internal"); got != subRowIndent {
+		t.Errorf("row key column = %d, want %d (%q)", got, subRowIndent, lines[1])
 	}
 	// the value column aligns across rows: PASS sits past the widest key.
 	if a, b := runeCol(lines[0], "PASS"), runeCol(lines[1], "PASS"); a != b {
@@ -65,29 +63,54 @@ func Test_FlatBlock_Alignment(t *testing.T) {
 	}
 }
 
-func Test_FlatBlock_TruncatesLastCell(t *testing.T) {
+// rows using the blank-first-cell convention (lint, per file) render grouped: the
+// shared key on its own line, its rows nested beneath, so a wide key column does
+// not push messages to a far-right gutter.
+func Test_FlatBlock_GroupsBlankFirstCell(t *testing.T) {
 	rows := [][]string{
-		{"GO-2026-4599", "crypto/x509", "v1.26.0 -> v1.26.1", "Incorrect enforcement of email constraints in crypto/x509"},
+		{"a/very/long/path/file_one.go", "1:1", "missing comment"},
+		{"", "19:1", "exported func"},
+		{"short.go", "3:4", "unused var"},
 	}
 	got := capture(t, func() {
-		NewPretty().FlatBlock("✗", "sec.vuln", 14, rows, 70)
+		NewPretty().ItemRows(rows)
 	})
-	line := strings.TrimRight(got, "\n")
-	if w := len([]rune(line)); w > 70 {
-		t.Errorf("line width = %d, want <= 70: %q", w, line)
+	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
+	// file1 + 2 members + file2 + 1 member = 5 lines (no header; that is the
+	// caller's summary line).
+	if len(lines) != 5 {
+		t.Fatalf("expected 5 lines, got %d: %q", len(lines), got)
 	}
-	if !strings.HasSuffix(line, "…") {
-		t.Errorf("expected truncated line to end with ellipsis: %q", line)
+	// file keys sit at base indent; members one level deeper.
+	if got := runeCol(lines[0], "a/very"); got != subRowIndent {
+		t.Errorf("file key column = %d, want %d (%q)", got, subRowIndent, lines[0])
+	}
+	if got := runeCol(lines[1], "1:1"); got != subRowIndent*2 {
+		t.Errorf("member column = %d, want %d (%q)", got, subRowIndent*2, lines[1])
+	}
+	// the wide path no longer dictates where messages start: the second file is a
+	// header, and its member's message sits at the same shallow member column.
+	if lines[3] != "  short.go" {
+		t.Errorf("second file header = %q, want %q", lines[3], "  short.go")
+	}
+	if a, b := runeCol(lines[1], "missing"), runeCol(lines[4], "unused"); a != b {
+		t.Errorf("message column misaligned across groups: %d vs %d", a, b)
 	}
 }
 
-func Test_FlatBlock_NoTruncateWhenWidthZero(t *testing.T) {
-	summary := "Incorrect enforcement of email constraints in crypto/x509"
+// the final cell is never clipped: a long message is emitted in full so the
+// terminal can soft-wrap it, instead of being cut at a fixed column the user
+// cannot widen past by resizing.
+func Test_FlatBlock_NeverTruncatesLastCell(t *testing.T) {
+	summary := "Incorrect enforcement of email constraints in crypto/x509 long enough to overflow any sensible terminal width and then some more"
 	rows := [][]string{{"GO-2026-4599", "crypto/x509", "v1.26.0 -> v1.26.1", summary}}
 	got := capture(t, func() {
-		NewPretty().FlatBlock("✗", "sec.vuln", 14, rows, 0)
+		NewPretty().ItemRows(rows)
 	})
 	if !strings.Contains(got, summary) {
-		t.Errorf("expected full summary when maxWidth is 0, got %q", got)
+		t.Errorf("expected the full message to be emitted, got %q", got)
+	}
+	if strings.Contains(got, "…") {
+		t.Errorf("expected no ellipsis (no truncation), got %q", got)
 	}
 }

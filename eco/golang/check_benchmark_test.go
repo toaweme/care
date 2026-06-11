@@ -1,6 +1,8 @@
 package golang
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/toaweme/mend"
@@ -64,4 +66,55 @@ func sameMetrics(a, b []mend.BenchMetric) bool {
 		}
 	}
 	return true
+}
+
+func Test_hasBenchmarks(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  bool
+	}{
+		{
+			name:  "no test files",
+			files: map[string]string{"main.go": "package x\n"},
+			want:  false,
+		},
+		{
+			name:  "test file without benchmark",
+			files: map[string]string{"x_test.go": "package x\n\nfunc Test_It(t *testing.T) {}\n"},
+			want:  false,
+		},
+		{
+			name:  "benchmark in a nested package",
+			files: map[string]string{"sub/b_test.go": "package sub\n\nimport \"testing\"\n\nfunc BenchmarkFoo(b *testing.B) {}\n"},
+			want:  true,
+		},
+		{
+			name:  "benchmark mention only in a comment does not count",
+			files: map[string]string{"x_test.go": "package x\n\n// func Benchmark would go here\nfunc Test_It(t *testing.T) {}\n"},
+			want:  false,
+		},
+		{
+			name:  "benchmark under testdata is ignored",
+			files: map[string]string{"testdata/b_test.go": "package x\n\nfunc BenchmarkFoo(b *testing.B) {}\n"},
+			want:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for rel, body := range tt.files {
+				p := filepath.Join(dir, rel)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if got := hasBenchmarks(dir); got != tt.want {
+				t.Errorf("hasBenchmarks = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

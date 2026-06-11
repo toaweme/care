@@ -10,21 +10,10 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/term"
 
 	"github.com/toaweme/mend"
 	"github.com/toaweme/mend/internal/rating"
 )
-
-// termWidth returns the terminal's column count, or 0 when stdout is not a
-// terminal (piped or redirected) so the report prints untruncated in logs.
-func termWidth() int {
-	w, _, err := term.GetSize(os.Stdout.Fd())
-	if err != nil || w <= 0 {
-		return 0
-	}
-	return w
-}
 
 // RenderOptions controls how a run's outputs are rendered.
 type RenderOptions struct {
@@ -229,11 +218,10 @@ func plural(n int, singular, plural string) string {
 // before this re-sorts by status.
 func renderChecks(p *Pretty, checks []mend.Rendered, opts RenderOptions) {
 	width := labelWidth(checks, rowLabel)
-	maxWidth := termWidth()
 
 	sortByStatus(checks)
 	for _, o := range checks {
-		renderCheck(p, o, width, maxWidth, opts)
+		renderCheck(p, o, width, opts)
 	}
 }
 
@@ -261,7 +249,7 @@ func sortByStatus(outputs []mend.Rendered) {
 	})
 }
 
-func renderCheck(p *Pretty, o mend.Rendered, width, maxWidth int, opts RenderOptions) {
+func renderCheck(p *Pretty, o mend.Rendered, width int, opts RenderOptions) {
 	label := rowLabel(o)
 	icn := icon(o.Status())
 	summary := o.Summary(opts.Verbosity)
@@ -274,23 +262,17 @@ func renderCheck(p *Pretty, o mend.Rendered, width, maxWidth int, opts RenderOpt
 		p.CheckRow(icn, label, width, detail)
 		return
 	}
-	// passing checks collapse to their one-line summary at default verbosity;
-	// -v expands their item rows into the flat block below.
+	// the summary line always prints; expanded item rows follow beneath it. Passing
+	// checks stay collapsed (summary only) at default verbosity and expand at -v.
+	p.CheckRow(icn, label, width, summary)
 	if o.Status() == mend.StatusOK && opts.Verbosity == 0 {
-		p.CheckRow(icn, label, width, summary)
 		return
 	}
-
 	rows := o.Rows(opts.Verbosity)
 	if o.Status() == mend.StatusFail && o.Err() != nil && opts.Verbosity > 1 {
 		rows = append(rows, []string{"err: " + o.Err().Error()})
 	}
-	// nothing structured to expand: keep the one-line summary row.
-	if len(rows) == 0 {
-		p.CheckRow(icn, label, width, summary)
-		return
-	}
-	p.FlatBlock(icn, label, width, rows, maxWidth)
+	p.ItemRows(rows)
 }
 
 // statusRank orders check rows for display: passing first, then skipped, warnings,

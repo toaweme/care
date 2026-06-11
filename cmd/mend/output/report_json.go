@@ -127,7 +127,7 @@ func typeOf(feature string) string {
 	switch feature {
 	case mend.FeatureSecrets, mend.FeatureVulnerabilities:
 		return "security"
-	case mend.FeatureBuild, mend.FeatureVet, mend.FeatureFormat, mend.FeatureLint, mend.FeatureDependencies, mend.FeatureDocs, mend.FeatureFixer:
+	case mend.FeatureBuild, mend.FeatureVet, mend.FeatureFormat, mend.FeatureLint, mend.FeatureDependencies, mend.FeatureRuntime, mend.FeatureDocs, mend.FeatureFixer:
 		return "quality"
 	case mend.FeatureTests, mend.FeatureBenchmark:
 		return "tests"
