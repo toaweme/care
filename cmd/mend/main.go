@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -9,7 +11,7 @@ import (
 	builtinCommands "github.com/toaweme/cli/commands/help"
 	"github.com/toaweme/cli/config"
 	yamlcodec "github.com/toaweme/cli/config/addons/yaml"
-	"github.com/toaweme/log"
+	"github.com/toaweme/http"
 
 	"github.com/toaweme/mend"
 	"github.com/toaweme/mend/cmd/mend/output"
@@ -19,18 +21,19 @@ import (
 	sharedtools "github.com/toaweme/mend/eco/shared/tools"
 	"github.com/toaweme/mend/internal/devops/git"
 	"github.com/toaweme/mend/internal/rating"
+	"github.com/toaweme/mend/templates"
 )
 
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Error("error getting working directory", "error", err)
+		slog.Error("mend", "error", fmt.Errorf("failed to get cwd: %w", err))
 		os.Exit(1)
 	}
 	if err := run(cwd, os.Args[1:]); err != nil {
 		// failing checks are already rendered; exit non-zero without an app-error log.
 		if !errors.Is(err, errChecksFailed) {
-			log.Error("error running app", "error", err)
+			slog.Error("mend", "error", fmt.Errorf("failed to run: %w", err))
 		}
 		os.Exit(1)
 	}
@@ -40,18 +43,18 @@ func main() {
 // and wires the status command. A help request is treated as success.
 func run(cwd string, args []string) error {
 	if err := cli.LoadDotEnv(); err != nil {
-		log.Warn("error loading .env", "error", err)
+		// log.Warn("error loading .env", "error", err)
 	}
 
 	yml := yamlcodec.New(".yml")
 	stores := []config.Store{
-		config.NewFileStore(config.HomePath(".mend"), "mend", yml),
-		config.NewFileStore(cwd, "mend", yml),
+		config.NewFileStore(config.HomePath(".mend"), "mend", true, yml),
+		config.NewFileStore(cwd, "mend", true, yml),
 	}
 	cfg := mend.Defaults()
 	for _, store := range stores {
 		if err := store.Read(&cfg); err != nil {
-			log.Warn("error loading config", "error", err)
+			// log.Warn("error loading config", "error", err)
 		}
 	}
 	app := cli.NewApp(cli.Config{Name: "mend", Version: "1.0.0"}, cli.GlobalFlags{Cwd: cwd})
@@ -86,9 +89,11 @@ func run(cwd string, args []string) error {
 	app.Default(statusCommand)
 	app.Add("status", statusCommand)
 
-	setupCommand := NewSetupCommand()
+	// an empty base URL lets the fetcher GET fully-qualified raw URLs verbatim.
+	httpClient := http.NewHttpClient(http.Config{UserAgent: "mend"})
+	setupCommand := NewSetupCommand(httpClient, templates.FS.ReadFile)
 	app.Add("setup", setupCommand)
-	setupCommand.Add("lint", NewSetupLintCommand(golang.ModulePath))
+	setupCommand.Add("lint", NewSetupLintCommand(httpClient, templates.FS.ReadFile, golang.ModulePath))
 
 	if err := app.Run(args); cli.IsRealError(err) {
 		return err

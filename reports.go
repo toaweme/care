@@ -160,40 +160,61 @@ func (r DepsReport) Rows(verbosity int) [][]string {
 	return rows
 }
 
-// RuntimeReport is the execution environment a module targets and what its own code
-// needs - NOT what its dependencies demand (that is dependency analysis, on
-// DepsReport). It carries the declared language/runtime version range (Go's `go`
-// directive, Node's engines, Python's requires-python) versus the range the code
-// itself requires, plus the toolchain / package-manager pin and, for ecosystems
-// that have them, the module system and platform targets. Language-agnostic: Go
-// fills only the version min and the toolchain (it has no upper bound, being
-// backwards-compatible, and no module/platform manifest), Node fills all of it.
-//
-// Minimum is the lowest version the module could declare, max(code requirement,
-// dependency floor); it is computed from the dependency floor (via the shared gomod
-// engine) for the verdict but the dependency data itself is not duplicated here.
+// RuntimeReport is the execution environment a project targets and what its own
+// code needs - not what its dependencies demand, which is DepsReport. It is
+// language-agnostic: an ecosystem fills only the parts it has. Go fills the version
+// floor and the toolchain; Node additionally fills the module system and platform
+// targets.
 type RuntimeReport struct {
-	Version        VersionRange `json:"version"`
-	RequiredReason string       `json:"required_reason,omitempty"`
-	Minimum        string       `json:"minimum,omitempty"`
-	Reducible      bool         `json:"reducible"`
-	// DepFloor is the dependency runtime floor, shown in the summary as labeled
-	// context (why the declared version can't go lower); the full per-dep table and
-	// the module that sets it live on DepsReport, not here.
-	DepFloor  string `json:"dep_floor,omitempty"`
-	GoBinary  string `json:"go_binary,omitempty"` // the toolchain actually running (go env GOVERSION)
-	Toolchain string `json:"toolchain,omitempty"`
-
-	ToolchainNote string   `json:"toolchain_note,omitempty"`
-	Module        string   `json:"module,omitempty"`    // Node: "esm"/"commonjs"; Go: ""
-	Platforms     []string `json:"platforms,omitempty"` // Node: os/cpu targets; Go: nil
+	// Version is the declared language version against what the code actually needs.
+	Version RuntimeVersion `json:"version"`
+	// Toolchain is the toolchain that builds and runs the project.
+	Toolchain RuntimeToolchain `json:"toolchain"`
+	// Targets is the module system and platforms the project builds for.
+	Targets RuntimeTargets `json:"targets"`
 }
 
-// VersionRange is a declared-versus-required pair of version bounds: what the
-// manifest claims to support against what the code actually needs.
-type VersionRange struct {
+// RuntimeVersion is the language version a project declares against the version its
+// own code needs, with the verdict on whether the declaration could be lowered.
+type RuntimeVersion struct {
+	// Declared is the version range the manifest claims to support (Go `go`
+	// directive, Node engines, Python requires-python).
 	Declared Bound `json:"declared"`
+	// Required is the version range the project's own code needs, by static analysis.
 	Required Bound `json:"required"`
+	// RequiredReason names the construct that sets Required's lower bound.
+	RequiredReason string `json:"required_reason,omitempty"`
+	// DependencyFloor is the lowest version the dependency graph allows.
+	DependencyFloor string `json:"dependency_floor,omitempty"`
+	// Minimum is the lowest version Declared could be set to: the higher of the code
+	// requirement and the dependency floor.
+	Minimum string `json:"minimum,omitempty"`
+	// Reducible reports whether Declared's lower bound sits above Minimum and so
+	// could be lowered to it.
+	Reducible bool `json:"reducible"`
+}
+
+// RuntimeToolchain is the toolchain or interpreter that builds and runs a project:
+// the version executing now against the version the manifest pins.
+type RuntimeToolchain struct {
+	// Running is the toolchain version currently executing (Go `go env GOVERSION`,
+	// the running node binary's version).
+	Running string `json:"running,omitempty"`
+	// Pinned is the toolchain version the manifest declares (Go `toolchain`
+	// directive, a packageManager field); empty when nothing is pinned.
+	Pinned string `json:"pinned,omitempty"`
+	// PinNote flags a notable Pinned value - one that is redundant or raises the
+	// build floor; empty when the pin is unremarkable.
+	PinNote string `json:"pin_note,omitempty"`
+}
+
+// RuntimeTargets is what a project targets at the environment level. Both fields
+// are empty for ecosystems without these concepts.
+type RuntimeTargets struct {
+	// ModuleSystem is the module format the project emits (Node "esm"/"commonjs").
+	ModuleSystem string `json:"module_system,omitempty"`
+	// Platforms are the os/arch targets the project builds for.
+	Platforms []string `json:"platforms,omitempty"`
 }
 
 // Bound is a version range [Min, Max]. An empty Max means unbounded - as Go always
@@ -219,27 +240,28 @@ func (b Bound) String() string {
 }
 
 func (r RuntimeReport) Summary(int) string {
+	v := r.Version
 	// each version is labeled by what it is, so the line reads unambiguously:
-	// "go.mod 1.25.0 · code 1.22 · deps 1.25.0". The go.mod field carries the only
-	// verdict - a "(min X)" marker when the declared version could drop.
-	gomod := "go.mod " + r.Version.Declared.String()
-	if r.Reducible && r.Minimum != "" {
-		gomod += " (min " + r.Minimum + ")"
+	// "declared 1.25.0 · code 1.22 · deps 1.25.0". The declared field carries the
+	// only verdict - a "(min X)" marker when the declared version could drop.
+	declared := "declared " + v.Declared.String()
+	if v.Reducible && v.Minimum != "" {
+		declared += " (min " + v.Minimum + ")"
 	}
-	parts := []string{gomod}
-	if req := r.Version.Required.String(); req != "" {
+	parts := []string{declared}
+	if req := v.Required.String(); req != "" {
 		parts = append(parts, "code "+req)
 	}
-	if r.DepFloor != "" {
-		parts = append(parts, "deps "+r.DepFloor)
+	if v.DependencyFloor != "" {
+		parts = append(parts, "deps "+v.DependencyFloor)
 	}
-	if r.Module != "" {
-		parts = append(parts, r.Module)
+	if r.Targets.ModuleSystem != "" {
+		parts = append(parts, r.Targets.ModuleSystem)
 	}
 	// a noteworthy (redundant/floor-raising) toolchain pin earns a place; a normal
 	// one is detail, shown in the rows.
-	if r.ToolchainNote != "" {
-		parts = append(parts, "toolchain "+r.Toolchain+" "+r.ToolchainNote)
+	if r.Toolchain.PinNote != "" {
+		parts = append(parts, "toolchain "+r.Toolchain.Pinned+" "+r.Toolchain.PinNote)
 	}
 	return strings.Join(parts, " · ")
 }
@@ -248,34 +270,33 @@ func (r RuntimeReport) Rows(verbosity int) [][]string {
 	if verbosity < 1 {
 		return nil
 	}
+	v := r.Version
 	var rows [][]string
-	add := func(k, v string) {
-		if v != "" {
-			rows = append(rows, []string{k, v})
+	add := func(k, val string) {
+		if val != "" {
+			rows = append(rows, []string{k, val})
 		}
 	}
-	add("go binary", r.GoBinary)
-	add("go.mod", r.Version.Declared.String())
-	if req := r.Version.Required.String(); req != "" {
+	add("running", r.Toolchain.Running)
+	add("declared", v.Declared.String())
+	if req := v.Required.String(); req != "" {
 		detail := req
-		if r.RequiredReason != "" {
-			detail += " (" + r.RequiredReason + ")"
+		if v.RequiredReason != "" {
+			detail += " (" + v.RequiredReason + ")"
 		}
 		add("code", detail)
 	}
-	if r.DepFloor != "" {
-		add("deps", r.DepFloor)
-	}
-	if r.Toolchain != "" {
-		tc := r.Toolchain
-		if r.ToolchainNote != "" {
-			tc += " (" + r.ToolchainNote + ")"
+	add("deps", v.DependencyFloor)
+	if r.Toolchain.Pinned != "" {
+		tc := r.Toolchain.Pinned
+		if r.Toolchain.PinNote != "" {
+			tc += " (" + r.Toolchain.PinNote + ")"
 		}
 		add("toolchain", tc)
 	}
-	add("module", r.Module)
-	if len(r.Platforms) > 0 {
-		add("platforms", strings.Join(r.Platforms, ", "))
+	add("module", r.Targets.ModuleSystem)
+	if len(r.Targets.Platforms) > 0 {
+		add("platforms", strings.Join(r.Targets.Platforms, ", "))
 	}
 	return rows
 }

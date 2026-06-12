@@ -42,14 +42,16 @@ func (f *runtimeCheck) Run(ctx context.Context, dir string, _ mend.RunOptions) m
 		return mend.Errored[mend.RuntimeReport]("read failed", fmt.Errorf("failed to read go.mod directives: %w", err))
 	}
 	report := mend.RuntimeReport{
-		Version:       mend.VersionRange{Declared: mend.Bound{Min: d.GoVersion}},
-		GoBinary:      goBinaryVersion(ctx, f.tool),
-		Toolchain:     d.Toolchain,
-		ToolchainNote: toolchainNote(d),
+		Version: mend.RuntimeVersion{Declared: mend.Bound{Min: d.GoVersion}},
+		Toolchain: mend.RuntimeToolchain{
+			Running: goBinaryVersion(ctx, f.tool),
+			Pinned:  d.Toolchain,
+			PinNote: toolchainNote(d),
+		},
 	}
 	if codeVer, reason, ok := codeFloor(ctx, dir); ok {
 		report.Version.Required = mend.Bound{Min: codeVer}
-		report.RequiredReason = reason
+		report.Version.RequiredReason = reason
 	}
 
 	// the dependency floor is shown as labeled context (why the declared version
@@ -58,10 +60,10 @@ func (f *runtimeCheck) Run(ctx context.Context, dir string, _ mend.RunOptions) m
 	// complete cache (exact, not a lower bound) and a known code requirement.
 	floor, ferr := gomod.ReadDepFloor(dir, goModCache(ctx, f.tool, dir))
 	if ferr == nil {
-		report.DepFloor = floor.Version
+		report.Version.DependencyFloor = floor.Version
 		if floor.Missing == 0 && report.Version.Required.Min != "" {
-			report.Minimum = maxGoVer(report.Version.Required.Min, floor.Version)
-			report.Reducible = report.Minimum != "" && goLess(report.Minimum, d.GoVersion)
+			report.Version.Minimum = maxGoVer(report.Version.Required.Min, floor.Version)
+			report.Version.Reducible = report.Version.Minimum != "" && goLess(report.Version.Minimum, d.GoVersion)
 		}
 	}
 

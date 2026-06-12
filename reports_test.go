@@ -31,23 +31,23 @@ func Test_RuntimeReport_Summary(t *testing.T) {
 	}{
 		{
 			name: "minimal go - every number labeled",
-			r:    RuntimeReport{Version: VersionRange{Declared: Bound{Min: "1.25.0"}, Required: Bound{Min: "1.22"}}, Minimum: "1.25.0", DepFloor: "1.25.0"},
-			want: []string{"go.mod 1.25.0", "code 1.22", "deps 1.25.0"},
+			r:    RuntimeReport{Version: RuntimeVersion{Declared: Bound{Min: "1.25.0"}, Required: Bound{Min: "1.22"}, Minimum: "1.25.0", DependencyFloor: "1.25.0"}},
+			want: []string{"declared 1.25.0", "code 1.22", "deps 1.25.0"},
 			deny: []string{"minimal", "(min "}, // already minimal: no marker
 		},
 		{
-			name: "reducible marks go.mod",
-			r:    RuntimeReport{Version: VersionRange{Declared: Bound{Min: "1.26.0"}, Required: Bound{Min: "1.22"}}, Minimum: "1.25.0", DepFloor: "1.25.0", Reducible: true},
-			want: []string{"go.mod 1.26.0 (min 1.25.0)", "code 1.22", "deps 1.25.0"},
+			name: "reducible marks declared",
+			r:    RuntimeReport{Version: RuntimeVersion{Declared: Bound{Min: "1.26.0"}, Required: Bound{Min: "1.22"}, Minimum: "1.25.0", DependencyFloor: "1.25.0", Reducible: true}},
+			want: []string{"declared 1.26.0 (min 1.25.0)", "code 1.22", "deps 1.25.0"},
 		},
 		{
 			name: "node range with module",
-			r:    RuntimeReport{Version: VersionRange{Declared: Bound{Min: "18.17", Max: "23"}, Required: Bound{Min: "20"}}, Module: "esm"},
-			want: []string{"go.mod 18.17..23", "code 20", "esm"},
+			r:    RuntimeReport{Version: RuntimeVersion{Declared: Bound{Min: "18.17", Max: "23"}, Required: Bound{Min: "20"}}, Targets: RuntimeTargets{ModuleSystem: "esm"}},
+			want: []string{"declared 18.17..23", "code 20", "esm"},
 		},
 		{
 			name: "toolchain note",
-			r:    RuntimeReport{Version: VersionRange{Declared: Bound{Min: "1.25.0"}}, Minimum: "1.25.0", Toolchain: "go1.26.0", ToolchainNote: "redundant"},
+			r:    RuntimeReport{Version: RuntimeVersion{Declared: Bound{Min: "1.25.0"}, Minimum: "1.25.0"}, Toolchain: RuntimeToolchain{Pinned: "go1.26.0", PinNote: "redundant"}},
 			want: []string{"toolchain go1.26.0 redundant"},
 		},
 	}
@@ -69,13 +69,13 @@ func Test_RuntimeReport_Summary(t *testing.T) {
 }
 
 func Test_RuntimeReport_Rows_fromV(t *testing.T) {
-	r := RuntimeReport{Version: VersionRange{Declared: Bound{Min: "1.25.0"}, Required: Bound{Min: "1.22"}}, RequiredReason: "go/types.Alias"}
+	r := RuntimeReport{Version: RuntimeVersion{Declared: Bound{Min: "1.25.0"}, Required: Bound{Min: "1.22"}, RequiredReason: "go/types.Alias"}}
 	if rows := r.Rows(0); rows != nil {
 		t.Errorf("v0 rows = %v, want nil", rows)
 	}
 	rows := r.Rows(1)
-	if len(rows) < 2 || rows[0][0] != "go.mod" || rows[1][0] != "code" {
-		t.Fatalf("v1 rows = %v, want go.mod + code breakdown", rows)
+	if len(rows) < 2 || rows[0][0] != "declared" || rows[1][0] != "code" {
+		t.Fatalf("v1 rows = %v, want declared + code breakdown", rows)
 	}
 }
 
