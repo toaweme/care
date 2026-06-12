@@ -6,27 +6,6 @@ import (
 	"github.com/toaweme/mend/eco/golang/gomod"
 )
 
-func Test_ParseRuntimePolicy(t *testing.T) {
-	tests := []struct {
-		in   string
-		want RuntimePolicy
-	}{
-		{"", RuntimeWarn},
-		{"warn", RuntimeWarn},
-		{"anything", RuntimeWarn},
-		{"strict", RuntimeStrict},
-		{"  Strict ", RuntimeStrict},
-		{"enforce", RuntimeStrict},
-		{"off", RuntimeOff},
-		{"DISABLED", RuntimeOff},
-	}
-	for _, tt := range tests {
-		if got := ParseRuntimePolicy(tt.in); got != tt.want {
-			t.Errorf("ParseRuntimePolicy(%q) = %d, want %d", tt.in, got, tt.want)
-		}
-	}
-}
-
 func Test_toolchainNote(t *testing.T) {
 	tests := []struct {
 		name     string

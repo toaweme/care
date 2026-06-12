@@ -31,8 +31,6 @@ const (
 const (
 	FeatureVersionControl  = "version_control"
 	FeatureBuild           = "build"
-	FeatureVet             = "vet"
-	FeatureFormat          = "format"
 	FeatureLint            = "lint"
 	FeatureDependencies    = "dependencies"
 	FeatureRuntime         = "runtime"
@@ -125,8 +123,6 @@ type Check[T Report] interface {
 type (
 	VersionControl  = Check[VCReport]
 	Build           = Check[BuildReport]
-	Vet             = Check[VetReport]
-	Format          = Check[FormatReport]
 	Quality         = Check[QualityReport]
 	Dependencies    = Check[DepsReport]
 	Runtime         = Check[RuntimeReport]

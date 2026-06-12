@@ -29,8 +29,8 @@ func Test_Evaluate_Score(t *testing.T) {
 		},
 		{
 			name:       "minor failure barely dents an otherwise clean repo",
-			checks:     []Check{{"build", Pass}, {"vet", Pass}, {"tests", Pass}, {"lint", Pass}, {"dependencies", Pass}, {"docs", Pass}, {"version_control", Pass}, {"format", Fail}},
-			wantScore:  94,
+			checks:     []Check{{"build", Pass}, {"tests", Pass}, {"lint", Pass}, {"dependencies", Pass}, {"version_control", Pass}, {"docs", Fail}},
+			wantScore:  93,
 			wantRating: "A",
 		},
 		{
@@ -41,8 +41,8 @@ func Test_Evaluate_Score(t *testing.T) {
 		},
 		{
 			name:       "broken build is heavy but not capped",
-			checks:     []Check{{"build", Fail}, {"vet", Pass}, {"tests", Pass}, {"lint", Pass}, {"dependencies", Pass}, {"docs", Pass}, {"version_control", Pass}, {"format", Pass}},
-			wantScore:  74,
+			checks:     []Check{{"build", Fail}, {"tests", Pass}, {"lint", Pass}, {"dependencies", Pass}, {"docs", Pass}, {"version_control", Pass}},
+			wantScore:  73,
 			wantRating: "C",
 		},
 	}

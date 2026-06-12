@@ -101,63 +101,25 @@ func issueLoc(is QualityIssue) string {
 	return "-"
 }
 
-// DepsReport is the dependency-hygiene state for one repo: the sub-checks that
-// found something (module not tidy, replace directives present). An empty Issues
-// list is a clean module.
+// DepsReport is the dependency-graph state for one repo: hygiene findings (module
+// not tidy, replace directives, failed verification) plus what the graph demands -
+// the runtime-version floor the dependencies force (RuntimeFloor, set by
+// RuntimeFloorBy) and the per-dependency runtime versions (Deps, verbose only).
 type DepsReport struct {
 	Issues []DepIssue `json:"issues,omitempty"`
+	// RuntimeFloor is the highest runtime version any dependency requires (Go: the
+	// max `go` directive across the graph); RuntimeFloorBy is the module that sets
+	// it. This is a demand the graph places on the project, surfaced next to the
+	// hygiene findings. Deps is every dependency with its declared runtime version.
+	RuntimeFloor   string       `json:"runtime_floor,omitempty"`
+	RuntimeFloorBy string       `json:"runtime_floor_by,omitempty"`
+	Deps           []RuntimeDep `json:"deps,omitempty"`
 }
 
 // DepIssue is one dependency finding: which sub-check raised it and the detail.
 type DepIssue struct {
-	Check  string `json:"check"` // tidy | replace
+	Check  string `json:"check"` // tidy | replace | verify
 	Detail string `json:"detail"`
-}
-
-func (r DepsReport) Summary(int) string {
-	if len(r.Issues) == 0 {
-		return "tidy, no replace directives"
-	}
-	return plural(len(r.Issues), "issue", "issues")
-}
-
-func (r DepsReport) Rows(int) [][]string {
-	rows := make([][]string, 0, len(r.Issues))
-	for _, it := range r.Issues {
-		rows = append(rows, []string{it.Check, it.Detail})
-	}
-	return rows
-}
-
-// RuntimeReport is the supported runtime/language-version range of a module: the
-// version constraint it declares (Go's `go` directive, Node's engines, Python's
-// requires-python) versus the range its code and dependencies actually allow. The
-// model carries both bounds because a language can have either or both: Go is
-// backwards-compatible so only Minimum is meaningful (Maximum stays empty,
-// unbounded), whereas a language that removes features also has a Maximum the code
-// can still run on. It is language-agnostic; an ecosystem fills what applies.
-type RuntimeReport struct {
-	Declared string `json:"declared"`
-
-	// Minimum is the lowest version the module could declare: max(CodeMin, DepMin).
-	// Maximum is the highest its code can still run on, or empty when unbounded (Go).
-	Minimum string `json:"minimum,omitempty"`
-	Maximum string `json:"maximum,omitempty"`
-	// Reducible is true when Declared is above Minimum and we can prove it (used to
-	// flag a non-minimal floor); ExceedsMax flags a Declared above a real ceiling.
-	Reducible  bool `json:"reducible"`
-	ExceedsMax bool `json:"exceeds_max,omitempty"`
-
-	CodeMin    string `json:"code_min,omitempty"`
-	CodeReason string `json:"code_reason,omitempty"`
-	CodeMax    string `json:"code_max,omitempty"`
-	DepMin     string `json:"dep_min,omitempty"`
-	DepModule  string `json:"dep_module,omitempty"`
-
-	CacheComplete bool         `json:"cache_complete"`
-	Toolchain     string       `json:"toolchain,omitempty"`
-	ToolchainNote string       `json:"toolchain_note,omitempty"`
-	Deps          []RuntimeDep `json:"deps,omitempty"`
 }
 
 // RuntimeDep is one dependency's identity and the runtime version it declares.
@@ -167,47 +129,153 @@ type RuntimeDep struct {
 	Min     string `json:"min,omitempty"` // the dep's own declared runtime version
 }
 
-func (r RuntimeReport) Summary(int) string {
-	head := r.Declared
+func (r DepsReport) Summary(verbosity int) string {
+	base := "tidy, no replace directives"
+	if len(r.Issues) > 0 {
+		base = plural(len(r.Issues), "issue", "issues")
+	}
+	// the runtime floor the graph forces is context, not a finding: shown from -v.
+	if verbosity >= 1 && r.RuntimeFloor != "" {
+		floor := "deps require " + r.RuntimeFloor
+		if r.RuntimeFloorBy != "" {
+			floor += " (" + r.RuntimeFloorBy + ")"
+		}
+		base += " · " + floor
+	}
+	return base
+}
+
+func (r DepsReport) Rows(verbosity int) [][]string {
+	// findings always render (they are actionable, independent of verbosity); the
+	// full per-dependency runtime-version table is exhaustive detail, shown at -vv.
+	rows := make([][]string, 0, len(r.Issues))
+	for _, it := range r.Issues {
+		rows = append(rows, []string{it.Check, it.Detail})
+	}
+	if verbosity >= 2 {
+		for _, d := range r.Deps {
+			rows = append(rows, []string{d.Module, d.Version, d.Min})
+		}
+	}
+	return rows
+}
+
+// RuntimeReport is the execution environment a module targets and what its own code
+// needs - NOT what its dependencies demand (that is dependency analysis, on
+// DepsReport). It carries the declared language/runtime version range (Go's `go`
+// directive, Node's engines, Python's requires-python) versus the range the code
+// itself requires, plus the toolchain / package-manager pin and, for ecosystems
+// that have them, the module system and platform targets. Language-agnostic: Go
+// fills only the version min and the toolchain (it has no upper bound, being
+// backwards-compatible, and no module/platform manifest), Node fills all of it.
+//
+// Minimum is the lowest version the module could declare, max(code requirement,
+// dependency floor); it is computed from the dependency floor (via the shared gomod
+// engine) for the verdict but the dependency data itself is not duplicated here.
+type RuntimeReport struct {
+	Version        VersionRange `json:"version"`
+	RequiredReason string       `json:"required_reason,omitempty"`
+	Minimum        string       `json:"minimum,omitempty"`
+	Reducible      bool         `json:"reducible"`
+	// DepFloor is the dependency runtime floor, shown in the summary as labeled
+	// context (why the declared version can't go lower); the full per-dep table and
+	// the module that sets it live on DepsReport, not here.
+	DepFloor  string `json:"dep_floor,omitempty"`
+	GoBinary  string `json:"go_binary,omitempty"` // the toolchain actually running (go env GOVERSION)
+	Toolchain string `json:"toolchain,omitempty"`
+
+	ToolchainNote string   `json:"toolchain_note,omitempty"`
+	Module        string   `json:"module,omitempty"`    // Node: "esm"/"commonjs"; Go: ""
+	Platforms     []string `json:"platforms,omitempty"` // Node: os/cpu targets; Go: nil
+}
+
+// VersionRange is a declared-versus-required pair of version bounds: what the
+// manifest claims to support against what the code actually needs.
+type VersionRange struct {
+	Declared Bound `json:"declared"`
+	Required Bound `json:"required"`
+}
+
+// Bound is a version range [Min, Max]. An empty Max means unbounded - as Go always
+// is, being backwards-compatible, so a Go bound never carries a Max; a language that
+// removes features (or declares an upper engines bound) fills it.
+type Bound struct {
+	Min string `json:"min,omitempty"`
+	Max string `json:"max,omitempty"`
+}
+
+// String renders a bound: "1.25" (min only), "<=22" (max only), "18..22" (both).
+func (b Bound) String() string {
 	switch {
-	case r.Reducible && r.Minimum != "":
-		head = r.Declared + ", can drop to " + r.Minimum
-	case r.CacheComplete && r.Minimum != "" && r.Minimum == r.Declared:
-		head = r.Declared + ", minimal"
+	case b.Min == "" && b.Max == "":
+		return ""
+	case b.Max == "":
+		return b.Min
+	case b.Min == "":
+		return "<=" + b.Max
+	default:
+		return b.Min + ".." + b.Max
 	}
-	var parts []string
-	if r.CodeMin != "" {
-		parts = append(parts, "code "+r.CodeMin)
+}
+
+func (r RuntimeReport) Summary(int) string {
+	// each version is labeled by what it is, so the line reads unambiguously:
+	// "go.mod 1.25.0 · code 1.22 · deps 1.25.0". The go.mod field carries the only
+	// verdict - a "(min X)" marker when the declared version could drop.
+	gomod := "go.mod " + r.Version.Declared.String()
+	if r.Reducible && r.Minimum != "" {
+		gomod += " (min " + r.Minimum + ")"
 	}
-	if r.DepMin != "" {
-		dep := "deps " + r.DepMin
-		if r.DepModule != "" {
-			dep += " (" + r.DepModule + ")"
-		}
-		if !r.CacheComplete {
-			dep += " [partial cache]"
-		}
-		parts = append(parts, dep)
+	parts := []string{gomod}
+	if req := r.Version.Required.String(); req != "" {
+		parts = append(parts, "code "+req)
 	}
-	if r.Maximum != "" {
-		parts = append(parts, "max "+r.Maximum)
+	if r.DepFloor != "" {
+		parts = append(parts, "deps "+r.DepFloor)
 	}
+	if r.Module != "" {
+		parts = append(parts, r.Module)
+	}
+	// a noteworthy (redundant/floor-raising) toolchain pin earns a place; a normal
+	// one is detail, shown in the rows.
 	if r.ToolchainNote != "" {
 		parts = append(parts, "toolchain "+r.Toolchain+" "+r.ToolchainNote)
 	}
-	if len(parts) == 0 {
-		return head
-	}
-	return head + " · " + strings.Join(parts, " · ")
+	return strings.Join(parts, " · ")
 }
 
 func (r RuntimeReport) Rows(verbosity int) [][]string {
-	if verbosity < 2 {
+	if verbosity < 1 {
 		return nil
 	}
-	rows := make([][]string, 0, len(r.Deps))
-	for _, d := range r.Deps {
-		rows = append(rows, []string{d.Module, d.Version, d.Min})
+	var rows [][]string
+	add := func(k, v string) {
+		if v != "" {
+			rows = append(rows, []string{k, v})
+		}
+	}
+	add("go binary", r.GoBinary)
+	add("go.mod", r.Version.Declared.String())
+	if req := r.Version.Required.String(); req != "" {
+		detail := req
+		if r.RequiredReason != "" {
+			detail += " (" + r.RequiredReason + ")"
+		}
+		add("code", detail)
+	}
+	if r.DepFloor != "" {
+		add("deps", r.DepFloor)
+	}
+	if r.Toolchain != "" {
+		tc := r.Toolchain
+		if r.ToolchainNote != "" {
+			tc += " (" + r.ToolchainNote + ")"
+		}
+		add("toolchain", tc)
+	}
+	add("module", r.Module)
+	if len(r.Platforms) > 0 {
+		add("platforms", strings.Join(r.Platforms, ", "))
 	}
 	return rows
 }
@@ -328,6 +396,11 @@ func (r TestReport) Rows(verbosity int) [][]string {
 	}
 	rows := make([][]string, 0, len(r.Suites))
 	for _, s := range r.Suites {
+		// at v0 only failing suites are findings; passing/skipped suites are context
+		// shown from -v, so a failed run stays focused on what broke.
+		if verbosity < 1 && (s.Passed || s.Skipped) {
+			continue
+		}
 		cells := []string{shortenPkg(s.Name, r.ModulePath), suiteResult(s)}
 		if r.WithCoverage {
 			cov := "-"
@@ -605,55 +678,6 @@ func (r BuildReport) Rows(int) [][]string {
 	return rows
 }
 
-// VetReport is the `go vet` findings for one repo.
-type VetReport struct {
-	Issues []VetIssue `json:"issues,omitempty"`
-}
-
-// VetIssue is one vet diagnostic: where it occurred and the message.
-type VetIssue struct {
-	File    string `json:"file,omitempty"`
-	Line    int    `json:"line,omitempty"`
-	Col     int    `json:"col,omitempty"`
-	Message string `json:"message"`
-}
-
-func (r VetReport) Summary(int) string {
-	if len(r.Issues) == 0 {
-		return "no issues"
-	}
-	return plural(len(r.Issues), "issue", "issues")
-}
-
-func (r VetReport) Rows(int) [][]string {
-	rows := make([][]string, 0, len(r.Issues))
-	for _, is := range r.Issues {
-		rows = append(rows, []string{is.File, lineCol(is.Line, is.Col), is.Message})
-	}
-	return rows
-}
-
-// FormatReport lists the files gofmt would reformat. An empty Files list means the
-// whole tree is gofmt-clean.
-type FormatReport struct {
-	Files []string `json:"files,omitempty"`
-}
-
-func (r FormatReport) Summary(int) string {
-	if len(r.Files) == 0 {
-		return "gofmt clean"
-	}
-	return plural(len(r.Files), "file unformatted", "files unformatted")
-}
-
-func (r FormatReport) Rows(int) [][]string {
-	rows := make([][]string, 0, len(r.Files))
-	for _, f := range r.Files {
-		rows = append(rows, []string{f})
-	}
-	return rows
-}
-
 // DocsReport is the doc-comment coverage of exported symbols: how many of the
 // repo's exported declarations carry a doc comment, and which do not.
 type DocsReport struct {
@@ -681,7 +705,25 @@ func (r DocsReport) Summary(int) string {
 // Rows is intentionally empty: docs reports general stats only (the Summary), never
 // the per-symbol list, which would flood the terminal. The full undocumented set
 // still rides on the JSON payload for machine consumers.
-func (r DocsReport) Rows(int) [][]string { return nil }
+func (r DocsReport) Rows(verbosity int) [][]string {
+	// the summary carries the coverage stats; the per-symbol undocumented list is
+	// exhaustive detail, shown only at -vv, grouped by file (blank-first-cell).
+	if verbosity < 2 || len(r.Missing) == 0 {
+		return nil
+	}
+	rows := make([][]string, 0, len(r.Missing))
+	last := ""
+	for _, s := range r.Missing {
+		file := s.File
+		if file == last {
+			file = ""
+		} else {
+			last = s.File
+		}
+		rows = append(rows, []string{file, lineCol(s.Line, 0), s.Kind + " " + s.Name})
+	}
+	return rows
+}
 
 // lineCol renders a line:col location, or "-" when no line is known.
 func lineCol(line, col int) string {

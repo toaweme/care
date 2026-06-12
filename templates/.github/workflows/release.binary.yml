@@ -1,0 +1,39 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# contents: write to publish the GitHub release; id-token: write for cosign
+# keyless signing; packages: write only needed if the GHCR container block in
+# .goreleaser.yml is enabled.
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the changelog can be built
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+      - uses: sigstore/cosign-installer@v3
+      # uncomment when the GHCR container block in .goreleaser.yml is enabled:
+      # - uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2" # pin to an exact goreleaser tag for full reproducibility
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}  # if the brews block is enabled

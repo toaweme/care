@@ -52,10 +52,8 @@ func DefaultWeights() map[string]int {
 		"vulnerabilities": 20,
 		"build":           20,
 		"tests":           15,
-		"vet":             10,
-		"lint":            10,
+		"lint":            20, // static analysis: golangci-lint, or the go vet + gofmt fallback
 		"dependencies":    8,
-		"format":          5,
 		"docs":            5,
 		"version_control": 5,
 		"benchmarks":      0,

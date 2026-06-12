@@ -43,29 +43,24 @@ func Test_HasGolangciConfig(t *testing.T) {
 	}
 }
 
-// Test_VetFormat_StepAside checks the philosophy-B gate: vet and format apply on a
-// Go module only when no golangci-lint config governs the dir.
-func Test_VetFormat_StepAside(t *testing.T) {
+// Test_Quality_ConfigDrivesEngine checks the merged Quality feature: it applies on
+// any Go module (golangci when a config governs, the go vet + gofmt fallback
+// otherwise), and the config-detection gate that selects the engine still works.
+func Test_Quality_ConfigDrivesEngine(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "go.mod"))
 
-	vet := NewVet(mend.Tool{})
-	format := NewFormat(mend.Tool{})
-
-	if !vet.Applies(root) {
-		t.Fatalf("vet should apply on a Go module with no golangci config")
+	quality := NewQuality(mend.Tool{}, mend.Tool{}, mend.Tool{})
+	if !quality.Applies(root) {
+		t.Fatalf("quality should apply on any Go module")
 	}
-	if !format.Applies(root) {
-		t.Fatalf("format should apply on a Go module with no golangci config")
+	if hasGolangciConfig(root) {
+		t.Fatalf("no config present: engine should be the vet+gofmt fallback")
 	}
 
 	writeFile(t, filepath.Join(root, ".golangci.yml"))
-
-	if vet.Applies(root) {
-		t.Fatalf("vet should step aside when a golangci config is present")
-	}
-	if format.Applies(root) {
-		t.Fatalf("format should step aside when a golangci config is present")
+	if !hasGolangciConfig(root) {
+		t.Fatalf("config present: engine should be golangci-lint")
 	}
 }
 

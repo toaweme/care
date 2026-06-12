@@ -33,10 +33,10 @@ func Test_BuildJSON_SingleRepo(t *testing.T) {
 	if rep.Health.OK != 1 || rep.Health.Fail != 1 {
 		t.Fatalf("health tally = %d ok %d fail, want 1 ok 1 fail", rep.Health.OK, rep.Health.Fail)
 	}
-	// lint (weight 10) failed, dependencies (weight 8) passed: weighted average is
-	// 8*100/(10+8) = 44, no critical cap, a failing grade.
-	if rep.Health.Score != 44 || rep.Health.Rating != "F" {
-		t.Fatalf("health grade = %d/%s, want 44/F", rep.Health.Score, rep.Health.Rating)
+	// lint (weight 20) failed, dependencies (weight 8) passed: weighted average is
+	// 8*100/(20+8) = 29, no critical cap, a failing grade.
+	if rep.Health.Score != 29 || rep.Health.Rating != "F" {
+		t.Fatalf("health grade = %d/%s, want 29/F", rep.Health.Score, rep.Health.Rating)
 	}
 	lint := rep.Checks[0]
 	if lint.Type != "quality" || lint.Feature != mend.FeatureLint || lint.Status != "FAIL" {

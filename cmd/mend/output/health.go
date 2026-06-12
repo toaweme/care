@@ -95,10 +95,6 @@ func (h *Health) accrueMetrics(o mend.Rendered) {
 		h.Metrics.Vulns += len(d.Findings)
 	case mend.BuildReport:
 		h.Metrics.Issues += len(d.Errors)
-	case mend.VetReport:
-		h.Metrics.Issues += len(d.Issues)
-	case mend.FormatReport:
-		h.Metrics.Issues += len(d.Files)
 	case mend.QualityReport:
 		h.Metrics.Issues += len(d.Issues)
 	case mend.DepsReport:

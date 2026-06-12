@@ -1,0 +1,86 @@
+# goreleaser config for a Go binary / CLI. Binary kind only - libraries are not
+# released as artifacts. The active blocks cover cross-compile, archives,
+# checksums and cosign keyless signing; the homebrew and container blocks are
+# commented opt-ins, enable them per repo. The goreleaser version is pinned in
+# the release workflow, not here.
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    # goreleaser injects main.version / main.commit / main.date by default; point
+    # ldflags at your own version package here if you keep the version elsewhere.
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+# cosign keyless signing of the checksums file. Needs cosign on PATH and
+# id-token: write in the release workflow; no long-lived key to rotate.
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+release:
+  prerelease: auto
+
+# opt-in: Homebrew formula. Needs a <org>/homebrew-tap repo and a
+# HOMEBREW_TAP_TOKEN secret wired into the release workflow.
+# brews:
+#   - repository:
+#       owner: __ORG__
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+#     homepage: "https://github.com/__ORG__/__REPO__"
+#     description: "__DESCRIPTION__"
+
+# opt-in: multi-arch container to GHCR + cosign image signing. Needs a docker
+# login step and packages: write in the release workflow.
+# dockers:
+#   - image_templates: ["ghcr.io/__ORG__/__REPO__:{{ .Version }}-amd64"]
+#     use: buildx
+#     goarch: amd64
+#     build_flag_templates: ["--platform=linux/amd64"]
+#   - image_templates: ["ghcr.io/__ORG__/__REPO__:{{ .Version }}-arm64"]
+#     use: buildx
+#     goarch: arm64
+#     build_flag_templates: ["--platform=linux/arm64"]
+# docker_manifests:
+#   - name_template: "ghcr.io/__ORG__/__REPO__:{{ .Version }}"
+#     image_templates:
+#       - "ghcr.io/__ORG__/__REPO__:{{ .Version }}-amd64"
+#       - "ghcr.io/__ORG__/__REPO__:{{ .Version }}-arm64"
+# docker_signs:
+#   - cmd: cosign
+#     args: ["sign", "--yes", "${artifact}@${digest}"]
+#     artifacts: manifests
+#     output: true

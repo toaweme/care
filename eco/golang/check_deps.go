@@ -63,10 +63,19 @@ func (f *goModCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) 
 		issues = append(issues, mend.DepIssue{Check: "verify", Detail: firstLine(out)})
 	}
 
-	if len(issues) > 0 {
-		return mend.Fail(mend.DepsReport{Issues: issues})
+	report := mend.DepsReport{Issues: issues}
+	// what the graph demands: the runtime-version floor the dependencies force, read
+	// from the local module cache (never downloaded), plus the per-dep table.
+	if floor, err := gomod.ReadDepFloor(dir, goModCache(ctx, f.tool, dir)); err == nil {
+		report.RuntimeFloor = floor.Version
+		report.RuntimeFloorBy = floor.Module
+		report.Deps = runtimeDeps(floor.Deps)
 	}
-	return mend.Pass(mend.DepsReport{})
+
+	if len(issues) > 0 {
+		return mend.Fail(report)
+	}
+	return mend.Pass(report)
 }
 
 // checkTidy returns the changes `go mod tidy` would make to go.mod/go.sum as

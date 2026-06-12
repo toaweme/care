@@ -1,0 +1,32 @@
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# cancel superseded runs on the same ref so a rapid push sequence doesn't pile
+# up parallel runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # a binary controls its own deploy toolchain, so there is no compatibility
+  # matrix: one cold runner on stable runs the whole quality pipeline (lint,
+  # tests+race, security). The install+run pair is the abstraction to lift into a
+  # shared org reusable-workflow later; pin @latest to a release tag once mend
+  # publishes tags.
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+      - run: go install github.com/toaweme/mend/cmd/mend@latest
+      - run: mend -q -t -r -s

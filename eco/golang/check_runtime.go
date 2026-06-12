@@ -17,8 +17,7 @@ import (
 
 type runtimeCheck struct {
 	mend.BaseCheck
-	tool   mend.Tool
-	policy RuntimePolicy
+	tool mend.Tool
 }
 
 var _ mend.Runtime = (*runtimeCheck)(nil)
@@ -27,51 +26,48 @@ var _ mend.Runtime = (*runtimeCheck)(nil)
 // against the lowest it could declare, max(code floor, dependency floor). Go is
 // backwards-compatible, so it fills only the minimum; there is no maximum. The
 // dependency floor is read from the local module cache (never downloaded) and the
-// code floor from the minver scan; both stay silent when they cannot be authoritative.
-// policy governs the verdict when the directive is above the minimum: warn
-// (default), strict (fail), or off (skip).
-func NewRuntime(tool mend.Tool, policy RuntimePolicy) mend.Runtime {
-	return &runtimeCheck{BaseCheck: mend.NewBaseCheck("go-runtime", tool), tool: tool, policy: policy}
+// code floor from the minver scan; both stay silent when they cannot be
+// authoritative. The check is purely informational - it always passes (weight-0 in
+// the rating engine), surfacing the version facts and a "(min X)" hint when the
+// directive could drop, but never warning or failing on its own.
+func NewRuntime(tool mend.Tool) mend.Runtime {
+	return &runtimeCheck{BaseCheck: mend.NewBaseCheck("go-runtime", tool), tool: tool}
 }
 
 func (f *runtimeCheck) Applies(dir string) bool { return hasGoMod(dir) }
 
 func (f *runtimeCheck) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.Output[mend.RuntimeReport] {
-	if f.policy == RuntimeOff {
-		return mend.Skip[mend.RuntimeReport]("disabled")
-	}
 	d, err := gomod.ReadDirectives(dir)
 	if err != nil {
 		return mend.Errored[mend.RuntimeReport]("read failed", fmt.Errorf("failed to read go.mod directives: %w", err))
 	}
-	report := mend.RuntimeReport{Declared: d.GoVersion, Toolchain: d.Toolchain}
-
-	if floor, err := gomod.ReadDepFloor(dir, f.modCache(ctx, dir)); err == nil {
-		report.DepMin = floor.Version
-		report.DepModule = floor.Module
-		report.CacheComplete = floor.Missing == 0
-		report.Deps = runtimeDeps(floor.Deps)
+	report := mend.RuntimeReport{
+		Version:       mend.VersionRange{Declared: mend.Bound{Min: d.GoVersion}},
+		GoBinary:      goBinaryVersion(ctx, f.tool),
+		Toolchain:     d.Toolchain,
+		ToolchainNote: toolchainNote(d),
 	}
 	if codeVer, reason, ok := codeFloor(ctx, dir); ok {
-		report.CodeMin = codeVer
-		report.CodeReason = reason
+		report.Version.Required = mend.Bound{Min: codeVer}
+		report.RequiredReason = reason
 	}
-	report.Minimum = maxGoVer(report.CodeMin, report.DepMin)
-	report.ToolchainNote = toolchainNote(d)
 
-	// reducible only when provable: a complete cache (the dependency floor is exact,
-	// not a lower bound) and a known code floor, with the directive above their max.
-	report.Reducible = report.CacheComplete && report.CodeMin != "" &&
-		report.Minimum != "" && goLess(report.Minimum, report.Declared)
-
-	switch {
-	case report.Reducible && f.policy == RuntimeStrict:
-		return mend.Fail(report)
-	case report.Reducible || report.ToolchainNote != "":
-		return mend.Warn(report)
-	default:
-		return mend.Pass(report)
+	// the dependency floor is shown as labeled context (why the declared version
+	// can't go lower); the dependency data itself (which module, the per-dep table)
+	// lives on the Dependencies check. Reducibility needs a provable floor: a
+	// complete cache (exact, not a lower bound) and a known code requirement.
+	floor, ferr := gomod.ReadDepFloor(dir, goModCache(ctx, f.tool, dir))
+	if ferr == nil {
+		report.DepFloor = floor.Version
+		if floor.Missing == 0 && report.Version.Required.Min != "" {
+			report.Minimum = maxGoVer(report.Version.Required.Min, floor.Version)
+			report.Reducible = report.Minimum != "" && goLess(report.Minimum, d.GoVersion)
+		}
 	}
+
+	// informational only: always pass, letting the report's labels and "(min X)"
+	// hint speak without warning or failing.
+	return mend.Pass(report)
 }
 
 // runtimeDeps maps the cache-read dependency list to the report shape, sorted by
@@ -140,13 +136,24 @@ func codeFloor(ctx context.Context, dir string) (ver, reason string, ok bool) {
 	return ver, reason, true
 }
 
-// modCache resolves the module cache directory via the injected go tool, falling
-// back to $GOMODCACHE. An empty result makes ReadDepFloor count every dep as missing,
-// which keeps the check from claiming a (then-unprovable) reducible directive.
-func (f *runtimeCheck) modCache(ctx context.Context, dir string) string {
-	out, err := f.tool.ExecStdout(ctx, dir, "env", "GOMODCACHE")
+// goModCache resolves the module cache directory via the injected go tool, falling
+// back to $GOMODCACHE. An empty result makes ReadDepFloor count every dep as missing.
+// Shared by the Runtime and Dependencies checks, which both read the dep cache.
+func goModCache(ctx context.Context, tool mend.Tool, dir string) string {
+	out, err := tool.ExecStdout(ctx, dir, "env", "GOMODCACHE")
 	if err != nil {
 		return os.Getenv("GOMODCACHE")
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// goBinaryVersion returns the toolchain actually running (`go env GOVERSION`, e.g.
+// "go1.26.0"), or "" when the go tool cannot be probed. It is shown as context next
+// to the declared go.mod version - what you build with versus what you require.
+func goBinaryVersion(ctx context.Context, tool mend.Tool) string {
+	out, err := tool.ExecStdout(ctx, ".", "env", "GOVERSION")
+	if err != nil {
+		return ""
 	}
 	return strings.TrimSpace(string(out))
 }
@@ -181,32 +188,4 @@ func goMinor(v string) (int, bool) {
 		return 0, false
 	}
 	return n, true
-}
-
-// RuntimePolicy controls how the Runtime check reacts when the declared version is
-// higher than the module's true minimum.
-type RuntimePolicy int
-
-const (
-	// RuntimeWarn reports a non-minimal directive as an advisory WARN. Default.
-	RuntimeWarn RuntimePolicy = iota
-	// RuntimeStrict fails the check when the directive is above the minimum, for
-	// modules (typically dependency-light libraries) that must declare the lowest
-	// version they support so they do not over-constrain consumers.
-	RuntimeStrict
-	// RuntimeOff disables the check entirely.
-	RuntimeOff
-)
-
-// ParseRuntimePolicy maps a config string to a policy, defaulting to warn. It
-// accepts strict/enforce/fail for strict and off/none/false for off.
-func ParseRuntimePolicy(s string) RuntimePolicy {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "strict", "enforce", "fail", "true":
-		return RuntimeStrict
-	case "off", "none", "false", "disable", "disabled":
-		return RuntimeOff
-	default:
-		return RuntimeWarn
-	}
 }

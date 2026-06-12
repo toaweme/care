@@ -67,11 +67,9 @@ func run(cwd string, args []string) error {
 	eco := &mend.Ecosystem{
 		VersionControl:  shared.NewVersionControl(),
 		Build:           golang.NewBuild(gotool),
-		Vet:             golang.NewVet(gotool),
-		Format:          golang.NewFormat(gofmt),
-		Quality:         golang.NewGolangciLint(golangci, gotool),
+		Quality:         golang.NewQuality(golangci, gotool, gofmt),
 		Dependencies:    golang.NewGoMod(gotool),
-		Runtime:         golang.NewRuntime(gotool, golang.RuntimeWarn),
+		Runtime:         golang.NewRuntime(gotool),
 		Docs:            golang.NewDocs(floatOption(cfg, "docs", "min")),
 		Tests:           golang.NewTests(gotool, cfg.Profiles.Tests),
 		Benchmark:       golang.NewBenchmark(gotool, cfg.Profiles.Bench),

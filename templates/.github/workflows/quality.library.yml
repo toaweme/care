@@ -1,0 +1,49 @@
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# cancel superseded runs on the same ref so a rapid push sequence doesn't pile
+# up parallel runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # compatibility matrix: raw `go test` across the Go versions this library
+  # claims to support. Deliberately does NOT run mend - this is a pure
+  # compile+test compatibility signal, and running it raw avoids dragging mend's
+  # own (newer) toolchain onto an older matrix Go just to build the linter. Each
+  # extra version is another cold runner, so list only the versions you support.
+  compat:
+    strategy:
+      fail-fast: false
+      matrix:
+        go: [oldstable, stable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go test ./...
+
+  # full quality pipeline (lint, tests+race, security) once on stable. Lint and
+  # security are Go-version-independent, so matrixing them would multiply the
+  # cold-runner cost for no extra signal. Pin @latest to a release tag once mend
+  # publishes tags.
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          check-latest: true
+      - run: go install github.com/toaweme/mend/cmd/mend@latest
+      - run: mend -q -t -r -s

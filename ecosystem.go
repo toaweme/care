@@ -9,8 +9,6 @@ package mend
 type Ecosystem struct {
 	VersionControl  VersionControl
 	Build           Build
-	Vet             Vet
-	Format          Format
 	Quality         Quality
 	Dependencies    Dependencies
 	Runtime         Runtime
@@ -29,8 +27,6 @@ type Ecosystem struct {
 type EcosystemConfig struct {
 	VersionControl  bool
 	Build           bool
-	Vet             bool
-	Format          bool
 	Quality         bool
 	Dependencies    bool
 	Runtime         bool
@@ -58,12 +54,6 @@ func (e *Ecosystem) Tasks(s EcosystemConfig) []Task {
 	}
 	if s.Build && e.Build != nil {
 		tasks = append(tasks, newTask(FeatureBuild, e.Build))
-	}
-	if s.Vet && e.Vet != nil {
-		tasks = append(tasks, newTask(FeatureVet, e.Vet))
-	}
-	if s.Format && e.Format != nil {
-		tasks = append(tasks, newTask(FeatureFormat, e.Format))
 	}
 	if s.Quality && e.Quality != nil {
 		tasks = append(tasks, newTask(FeatureLint, e.Quality))

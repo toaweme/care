@@ -1,10 +1,22 @@
 // Package templates ships the canonical toaweme config files (golangci, taskfile,
-// gitignore, GitHub workflows, licenses) as an embedded filesystem so the `mend
-// setup` subcommands can write them into target repos without any network
-// dependency.
+// gitignore, GitHub quality + release workflows, goreleaser, licenses) as an
+// embedded filesystem so the `mend setup` subcommands can write them into target
+// repos without any network dependency. Workflow templates live under
+// `.github/workflows/`; the repo kind is encoded in the filename (`*.library.yml`
+// / `*.binary.yml`). The setup file matrix maps each source to its destination
+// path (e.g. `release.binary.yml` -> `.github/workflows/release.yml`).
 package templates
 
 import "embed"
 
-//go:embed .golangci.yml gitignore taskfile.library.yml taskfile.binary.yml taskfile.run.go.yml taskfile.test.go.yml .github/workflows licenses
+//go:embed .golangci.yml .goreleaser.yml gitignore taskfile.library.yml taskfile.binary.yml taskfile.run.go.yml taskfile.test.go.yml .github/workflows licenses
 var FS embed.FS
+
+var files = map[string][]string{
+	"github.com/toaweme/mend/templates": {
+		".golangci.yml",
+	},
+}
+
+// ~/.mend/templates
+//
