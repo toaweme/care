@@ -12,35 +12,35 @@ import (
 	"github.com/toaweme/mend/eco/shared/sync"
 )
 
-// SetupConfig drives the generic `mend setup` file sync. With no --from it falls
+// GetConfig drives the generic `mend get` file sync. With no --from it falls
 // back to listing the scaffolding subcommands.
-type SetupConfig struct {
-	From  string `arg:"from" short:"f" env:"MEND_SETUP_FROM" help:"Source to sync from: a local path, a bundled template name, a github/gist url, or the owner/repo/path shorthand"`
-	Out   string `arg:"out" short:"o" env:"MEND_SETUP_OUT" help:"Destination path to write, relative to cwd"`
+type GetConfig struct {
+	From  string `arg:"from" short:"f" env:"MEND_GET_FROM" help:"Source to sync from: a local path, a bundled template name, a github/gist url, or the owner/repo/path shorthand"`
+	Out   string `arg:"out" short:"o" env:"MEND_GET_OUT" help:"Destination path to write, relative to cwd"`
 	Token string `arg:"token" short:"t" env:"GITHUB_TOKEN" help:"GitHub token for private sources; defaults to the GITHUB_TOKEN env"`
-	Force bool   `arg:"force" env:"MEND_SETUP_FORCE" default:"false" help:"Overwrite an existing destination file"`
+	Force bool   `arg:"force" env:"MEND_GET_FORCE" default:"false" help:"Overwrite an existing destination file"`
 }
 
-// SetupCommand is the parent of the repo-scaffolding subcommands (lint, ...) and
+// GetCommand is the parent of the repo-scaffolding subcommands (lint, ...) and
 // the generic file-sync entry point. Run with --from it syncs one file; run bare
 // it lists its subcommands.
-type SetupCommand struct {
-	cli.BaseCommand[SetupConfig]
+type GetCommand struct {
+	cli.BaseCommand[GetConfig]
 	client http.Client
 	embed  sync.EmbedFunc
 }
 
-var _ cli.Command[SetupConfig] = (*SetupCommand)(nil)
+var _ cli.Command[GetConfig] = (*GetCommand)(nil)
 
-func NewSetupCommand(client http.Client, embed sync.EmbedFunc) *SetupCommand {
-	return &SetupCommand{
-		BaseCommand: cli.NewBaseCommand[SetupConfig](),
+func NewGetCommand(client http.Client, embed sync.EmbedFunc) *GetCommand {
+	return &GetCommand{
+		BaseCommand: cli.NewBaseCommand[GetConfig](),
 		client:      client,
 		embed:       embed,
 	}
 }
 
-func (c *SetupCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
+func (c *GetCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	if c.Inputs.From == "" {
 		return cli.ErrDisplaySubCommands
 	}
@@ -58,7 +58,7 @@ func (c *SetupCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	return nil
 }
 
-func (c *SetupCommand) Help() string {
+func (c *GetCommand) Help() string {
 	return "Sync a config file into the current repo, either from a named preset (subcommands: lint) or a remote source via --from <src> --out <path> (github owner/repo/path, gist:<id>, builtin:<name>)."
 }
 
@@ -70,7 +70,7 @@ func resolveDest(cwd, out string) string {
 	return filepath.Join(cwd, out)
 }
 
-// reportSync prints the outcome of a sync in the shared setup style.
+// reportSync prints the outcome of a sync in the shared get style.
 func reportSync(res sync.Result) {
 	if res.Skipped {
 		fmt.Printf("%s %s already exists; pass --force to overwrite\n", output.WarnStyle.Render("•"), res.Dest)

@@ -90,10 +90,10 @@ func run(cwd string, args []string) error {
 	app.Add("status", statusCommand)
 
 	// an empty base URL lets the fetcher GET fully-qualified raw URLs verbatim.
-	httpClient := http.NewHttpClient(http.Config{UserAgent: "mend"})
-	setupCommand := NewSetupCommand(httpClient, templates.FS.ReadFile)
-	app.Add("setup", setupCommand)
-	setupCommand.Add("lint", NewSetupLintCommand(httpClient, templates.FS.ReadFile, golang.ModulePath))
+	httpClient := http.NewClient(http.Config{UserAgent: "mend"})
+	getCommand := NewGetCommand(httpClient, templates.FS.ReadFile)
+	app.Add("get", getCommand)
+	getCommand.Add("lint", NewGetLintCommand(httpClient, templates.FS.ReadFile, golang.ModulePath))
 
 	if err := app.Run(args); cli.IsRealError(err) {
 		return err

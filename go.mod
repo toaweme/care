@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/toaweme/cli v0.2.0
 	github.com/toaweme/cli/config/addons/yaml v0.2.0
-	github.com/toaweme/http v0.0.0-20260526182112-752efcee2210
+	github.com/toaweme/http v0.1.0
 	golang.org/x/mod v0.37.0
 	golang.org/x/tools v0.46.0
 )
@@ -25,7 +25,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/toaweme/log v0.0.0-20260118181930-c65718604628 // indirect
 	github.com/toaweme/structs v0.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/sync v0.21.0 // indirect

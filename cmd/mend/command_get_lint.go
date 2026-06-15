@@ -14,22 +14,22 @@ import (
 	"github.com/toaweme/mend/eco/shared/sync"
 )
 
-// SetupLintConfig configures the lint scaffolding subcommand: the shared sync
+// GetLintConfig configures the lint scaffolding subcommand: the shared sync
 // flags plus the lint-only import-sort prefixes. With no --from the canonical
 // golangci config is rendered from the bundled template; --from pulls it from a
 // source verbatim (no placeholder expansion).
-type SetupLintConfig struct {
-	SetupConfig
-	ImportSortPrefixes []string `arg:"isp" short:"i" sep:"," env:"MEND_SETUP_IMPORT_SORT_PREFIXES" help:"Import path prefixes grouped right after stdlib (goimports local-prefixes); comma-separated. Defaults to the repo's module path. Ignored with --from"`
+type GetLintConfig struct {
+	GetConfig
+	ImportSortPrefixes []string `arg:"isp" short:"i" sep:"," env:"MEND_GET_IMPORT_SORT_PREFIXES" help:"Import path prefixes grouped right after stdlib (goimports local-prefixes); comma-separated. Defaults to the repo's module path. Ignored with --from"`
 }
 
-// SetupLintCommand writes a golangci-lint config into the current repository.
+// GetLintCommand writes a golangci-lint config into the current repository.
 // Without --from it renders the canonical bundled config (expanding the goimports
 // local-prefixes placeholder); with --from it syncs a config from a source
 // verbatim. When a config already governs the dir (here or in a parent, as
 // golangci-lint resolves upward) it reports and skips unless --force is passed.
-type SetupLintCommand struct {
-	cli.BaseCommand[SetupLintConfig]
+type GetLintCommand struct {
+	cli.BaseCommand[GetLintConfig]
 	client http.Client
 	// embed reads the bundled templates by name.
 	embed sync.EmbedFunc
@@ -38,17 +38,17 @@ type SetupLintCommand struct {
 	module func(dir string) string
 }
 
-var _ cli.Command[SetupLintConfig] = (*SetupLintCommand)(nil)
+var _ cli.Command[GetLintConfig] = (*GetLintCommand)(nil)
 
-func NewSetupLintCommand(client http.Client, embed sync.EmbedFunc, module func(dir string) string) *SetupLintCommand {
-	return &SetupLintCommand{client: client, embed: embed, module: module}
+func NewGetLintCommand(client http.Client, embed sync.EmbedFunc, module func(dir string) string) *GetLintCommand {
+	return &GetLintCommand{client: client, embed: embed, module: module}
 }
 
-func (c *SetupLintCommand) Help() string {
+func (c *GetLintCommand) Help() string {
 	return "Write a golangci-lint config into the current repo: the canonical bundled config by default, or one synced from --from (a local path, bundled template name, or github/gist url). Reports and skips when a config already governs the dir (--force to overwrite)."
 }
 
-func (c *SetupLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
+func (c *GetLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	dir := options.Cwd
 
 	if existing, found := golang.FindGolangciConfig(dir); found && !c.Inputs.Force {
@@ -81,7 +81,7 @@ func (c *SetupLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 
 // resolve returns the config bytes and a one-line source description, either from
 // a remote --from source or the rendered builtin template.
-func (c *SetupLintCommand) resolve(dir, dst string) ([]byte, string, error) {
+func (c *GetLintCommand) resolve(dir, dst string) ([]byte, string, error) {
 	if c.Inputs.From != "" {
 		engine := sync.NewEngine(sync.NewFetcher(c.client, c.Inputs.Token), c.embed)
 		src, err := engine.Resolve(c.Inputs.From, filepath.Base(dst))
