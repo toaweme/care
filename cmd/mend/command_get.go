@@ -1,7 +1,10 @@
+// Command mend reports repository health and scaffolds config files for the
+// current repo's ecosystem.
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -32,6 +35,7 @@ type GetCommand struct {
 
 var _ cli.Command[GetConfig] = (*GetCommand)(nil)
 
+// NewGetCommand builds the parent get command from the http client and embed reader.
 func NewGetCommand(client http.Client, embed sync.EmbedFunc) *GetCommand {
 	return &GetCommand{
 		BaseCommand: cli.NewBaseCommand[GetConfig](),
@@ -40,12 +44,13 @@ func NewGetCommand(client http.Client, embed sync.EmbedFunc) *GetCommand {
 	}
 }
 
+// Run syncs one file when --from is set, otherwise lists the get subcommands.
 func (c *GetCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	if c.Inputs.From == "" {
 		return cli.ErrDisplaySubCommands
 	}
 	if c.Inputs.Out == "" {
-		return fmt.Errorf("a destination is required: pass --out <path>")
+		return errors.New("a destination is required: pass --out <path>")
 	}
 
 	engine := sync.NewEngine(sync.NewFetcher(c.client, c.Inputs.Token), c.embed)
@@ -58,6 +63,7 @@ func (c *GetCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	return nil
 }
 
+// Help returns the get command's usage text.
 func (c *GetCommand) Help() string {
 	return "Sync a config file into the current repo, either from a named preset (subcommands: lint) or a remote source via --from <src> --out <path> (github owner/repo/path, gist:<id>, builtin:<name>)."
 }

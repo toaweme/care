@@ -10,6 +10,7 @@ import "math"
 // dependency on the core mend types.
 type Outcome int
 
+// The outcomes a single check can report, ordered best to worst.
 const (
 	Pass Outcome = iota
 	Warn
@@ -141,8 +142,8 @@ func applyCaps(score int, checks []Check, caps map[string]int) int {
 		if c.Outcome != Fail {
 			continue
 		}
-		if cap, ok := caps[c.Feature]; ok && score > cap {
-			score = cap
+		if capValue, ok := caps[c.Feature]; ok && score > capValue {
+			score = capValue
 		}
 	}
 	return score

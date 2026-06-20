@@ -35,12 +35,16 @@ type OutputFlags struct {
 	ExpandInstall bool `arg:"expand-install" short:"ei" env:"MEND_EXPAND_INSTALL" default:"false" help:"Expand the per-tool install phase into its own section instead of folding it into the repo header"`
 }
 
+// StatusConfig is the full flag set for a status run: which checks to run, how to
+// render them, and the verbosity level.
 type StatusConfig struct {
 	StatusFlags
 	OutputFlags
 	cli.Verbosity
 }
 
+// StatusCommand runs the configured checks against the current repo and renders
+// their results.
 type StatusCommand struct {
 	cli.BaseCommand[StatusConfig]
 	eco    *mend.Ecosystem
@@ -61,14 +65,19 @@ type StatusCommand struct {
 
 var _ cli.Command[StatusConfig] = (*StatusCommand)(nil)
 
+// NewStatusCommand wires the status command to its ecosystem, runner, and the
+// resolvers for module identity, disabled features, version control, and grading.
 func NewStatusCommand(eco *mend.Ecosystem, runner mend.Runner, module func(dir string) string, disabled func(feature string) bool, vc func(dir string) *output.VCInfo, grading rating.Config) *StatusCommand {
 	return &StatusCommand{eco: eco, runner: runner, module: module, disabled: disabled, vc: vc, grading: grading}
 }
 
+// Help returns the status command's usage text.
 func (c *StatusCommand) Help() string {
 	return "Report status for the current repository: --git state, -q quality, -t tests, -b benchmarks, -s security (default: all, with coverage). --coverage forces coverage on a -t run; --fix applies fixes first."
 }
 
+// Run executes the selected checks against the cwd, renders the report, and returns
+// errChecksFailed when any check fails.
 func (c *StatusCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	in := c.Inputs.StatusFlags
 	config, runOptions := mapEcosystemConfigs(in)

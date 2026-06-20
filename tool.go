@@ -40,6 +40,7 @@ func (t Tool) Spec() ToolSpec { return t.spec }
 
 // Exec runs the tool's binary in dir with args and returns its combined output.
 func (t Tool) Exec(ctx context.Context, dir string, args ...string) ([]byte, error) {
+	//nolint:gosec // tool name and args are program-controlled, from a registered ToolSpec
 	cmd := exec.CommandContext(ctx, t.spec.Name, args...)
 	cmd.Dir = dir
 	return cmd.CombinedOutput()
@@ -62,6 +63,7 @@ func (t Tool) Version(ctx context.Context) string {
 // discarding stderr. It suits tools whose machine-readable output (e.g.
 // govulncheck -json) goes to stdout while progress noise goes to stderr.
 func (t Tool) ExecStdout(ctx context.Context, dir string, args ...string) ([]byte, error) {
+	//nolint:gosec // tool name and args are program-controlled, from a registered ToolSpec
 	cmd := exec.CommandContext(ctx, t.spec.Name, args...)
 	cmd.Dir = dir
 	var out bytes.Buffer

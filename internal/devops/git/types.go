@@ -5,6 +5,7 @@ import "time"
 // FileStatus represents the git status of a file.
 type FileStatus int
 
+// The working-tree states a File can be in, as reported by git status.
 const (
 	Untracked FileStatus = iota
 	Unmodified
@@ -20,6 +21,7 @@ type File struct {
 	Status FileStatus
 }
 
+// StatusString returns the file's working-tree state as a lowercase word.
 func (f File) StatusString() string {
 	switch f.Status {
 	case Untracked:

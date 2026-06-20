@@ -40,14 +40,19 @@ type GetLintCommand struct {
 
 var _ cli.Command[GetLintConfig] = (*GetLintCommand)(nil)
 
+// NewGetLintCommand builds the lint scaffolding subcommand from the http client,
+// embed reader, and module-path resolver.
 func NewGetLintCommand(client http.Client, embed sync.EmbedFunc, module func(dir string) string) *GetLintCommand {
 	return &GetLintCommand{client: client, embed: embed, module: module}
 }
 
+// Help returns the lint subcommand's usage text.
 func (c *GetLintCommand) Help() string {
 	return "Write a golangci-lint config into the current repo: the canonical bundled config by default, or one synced from --from (a local path, bundled template name, or github/gist url). Reports and skips when a config already governs the dir (--force to overwrite)."
 }
 
+// Run writes a golangci-lint config into the current repo, rendering the bundled
+// template or syncing one from --from, skipping when a config already governs the dir.
 func (c *GetLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	dir := options.Cwd
 

@@ -1,3 +1,5 @@
+// Package tests runs the Go test suite once via `go test ./... -json` and parses
+// the test2json event stream into per-package, per-test, and coverage results.
 package tests
 
 import (
@@ -36,10 +38,12 @@ type Options struct {
 	Args     []string
 }
 
+// NewRunner creates a GoTestRunner configured from the given Options.
 func NewRunner(opts Options) *GoTestRunner {
 	return &GoTestRunner{race: opts.Race, coverage: opts.Coverage, tags: opts.Tags, args: opts.Args}
 }
 
+// Run executes the test suite in dir and returns the parsed Report.
 func (r *GoTestRunner) Run(ctx context.Context, dir string) (Report, error) {
 	args := []string{"test", "-json"}
 
@@ -221,8 +225,8 @@ type pkgCoverage struct {
 // covered statements per package and per file. The profile keys blocks by full
 // import path + file, so the package import path is the directory of that path,
 // which matches the test2json Package field.
-func parseCoverProfile(path_ string) (map[string]*pkgCoverage, error) {
-	data, err := os.ReadFile(path_)
+func parseCoverProfile(profilePath string) (map[string]*pkgCoverage, error) {
+	data, err := os.ReadFile(profilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read coverage profile: %w", err)
 	}
@@ -330,7 +334,7 @@ func lineOf(coord string) int {
 // coverFuncs runs `go tool cover -func` over the profile and returns the per-function
 // coverage grouped by package import path (the directory of the reported file path).
 func coverFuncs(ctx context.Context, dir, profilePath string) (map[string][]FuncCoverage, error) {
-	cmd := exec.CommandContext(ctx, "go", "tool", "cover", "-func="+profilePath)
+	cmd := exec.CommandContext(ctx, "go", "tool", "cover", "-func="+profilePath) //nolint:gosec // profilePath is an internal temp file, not user input
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {

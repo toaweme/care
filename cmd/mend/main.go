@@ -42,9 +42,8 @@ func main() {
 // run loads config, builds and injects the tools, registers the features by role,
 // and wires the status command. A help request is treated as success.
 func run(cwd string, args []string) error {
-	if err := cli.LoadDotEnv(); err != nil {
-		// log.Warn("error loading .env", "error", err)
-	}
+	// optional: a missing or unreadable .env is not an error.
+	_ = cli.LoadDotEnv()
 
 	yml := yamlcodec.New(".yml")
 	stores := []config.Store{
@@ -53,9 +52,8 @@ func run(cwd string, args []string) error {
 	}
 	cfg := mend.Defaults()
 	for _, store := range stores {
-		if err := store.Read(&cfg); err != nil {
-			// log.Warn("error loading config", "error", err)
-		}
+		// optional: a missing config store layers nothing and is not an error.
+		_ = store.Read(&cfg)
 	}
 	app := cli.NewApp(cli.Config{Name: "mend", Version: "1.0.0"}, cli.GlobalFlags{Cwd: cwd})
 

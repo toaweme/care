@@ -23,7 +23,7 @@ func (p embedProvider) Resolve(spec string) (Source, bool, error) {
 	data, err := p.read(spec)
 	if err != nil {
 		// not an embedded template; let the remote providers try.
-		return Source{}, false, nil
+		return Source{}, false, nil //nolint:nilerr // a read miss means "not mine", signaled by ok=false, not an error
 	}
 	return Source{Provider: providerEmbed, kind: kindEmbed, name: spec, data: data}, true, nil
 }

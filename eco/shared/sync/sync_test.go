@@ -25,7 +25,7 @@ func Test_Engine_Sync_WritesNewFile(t *testing.T) {
 	fetcher := &stubFetcher{body: []byte("linters: []\n")}
 	engine := NewEngine(fetcher, nil)
 
-	res, err := engine.Sync(context.Background(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst})
+	res, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst})
 	if err != nil {
 		t.Fatalf("Sync error: %v", err)
 	}
@@ -49,7 +49,7 @@ func Test_Engine_Sync_SkipsExistingWithoutForce(t *testing.T) {
 	}
 	engine := NewEngine(&stubFetcher{body: []byte("remote")}, nil)
 
-	res, err := engine.Sync(context.Background(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst})
+	res, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst})
 	if err != nil {
 		t.Fatalf("Sync error: %v", err)
 	}
@@ -70,7 +70,7 @@ func Test_Engine_Sync_ForceOverwrites(t *testing.T) {
 	}
 	engine := NewEngine(&stubFetcher{body: []byte("remote")}, nil)
 
-	if _, err := engine.Sync(context.Background(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst, Force: true}); err != nil {
+	if _, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst, Force: true}); err != nil {
 		t.Fatalf("Sync error: %v", err)
 	}
 	got, _ := os.ReadFile(dst)
@@ -85,7 +85,7 @@ func Test_Engine_Sync_BareRepoFillsFilenameFromDest(t *testing.T) {
 	fetcher := &stubFetcher{body: []byte("x")}
 	engine := NewEngine(fetcher, nil)
 
-	if _, err := engine.Sync(context.Background(), Request{Spec: "toaweme/common", Dest: dst}); err != nil {
+	if _, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common", Dest: dst}); err != nil {
 		t.Fatalf("Sync error: %v", err)
 	}
 	want := "https://raw.githubusercontent.com/toaweme/common/HEAD/.golangci.yml"
@@ -96,7 +96,7 @@ func Test_Engine_Sync_BareRepoFillsFilenameFromDest(t *testing.T) {
 
 func Test_Engine_Sync_RequiresDest(t *testing.T) {
 	engine := NewEngine(&stubFetcher{body: []byte("x")}, nil)
-	if _, err := engine.Sync(context.Background(), Request{Spec: "toaweme/common/.golangci.yml"}); err == nil {
+	if _, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml"}); err == nil {
 		t.Fatalf("expected error for empty dest")
 	}
 }

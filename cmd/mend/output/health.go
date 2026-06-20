@@ -1,3 +1,4 @@
+// Package output renders a run's check results as a styled terminal report or JSON.
 package output
 
 import (

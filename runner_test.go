@@ -63,8 +63,8 @@ func Test_Runner_DeterministicOrder(t *testing.T) {
 
 	// repeated runs produce identical feature-sorted order despite concurrent
 	// completion.
-	for i := 0; i < 5; i++ {
-		got := runOutputs(r.Run(context.Background(), tasks, "/repo", RunOptions{}))
+	for i := range 5 {
+		got := runOutputs(r.Run(t.Context(), tasks, "/repo", RunOptions{}))
 		var seq []string
 		for _, o := range got {
 			seq = append(seq, o.Feature())
@@ -84,7 +84,7 @@ func Test_Runner_SkipsNotApplicable(t *testing.T) {
 		newTask[noteReport]("go_only", skipFeat),
 	}
 	r := NewRunner(false, nil)
-	got := runOutputs(r.Run(context.Background(), tasks, "/repo", RunOptions{}))
+	got := runOutputs(r.Run(t.Context(), tasks, "/repo", RunOptions{}))
 	if len(got) != 2 {
 		t.Fatalf("got %d outputs, want 2", len(got))
 	}
@@ -104,7 +104,7 @@ func Test_Runner_FixerRunsBeforeChecks(t *testing.T) {
 		newTask[noteReport](FeatureTests, prog("tests", StatusOK)),
 	}
 	r := NewRunner(false, nil)
-	got := runOutputs(r.Run(context.Background(), tasks, "/repo", RunOptions{}))
+	got := runOutputs(r.Run(t.Context(), tasks, "/repo", RunOptions{}))
 	if calls != 1 {
 		t.Fatalf("fixer ran %d times, want 1", calls)
 	}

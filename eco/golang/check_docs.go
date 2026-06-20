@@ -44,12 +44,12 @@ func (f *docsCheck) Run(_ context.Context, dir string, _ mend.RunOptions) mend.O
 	if report.Total == 0 {
 		return mend.Pass(report)
 	}
-	min := f.minCoverage
-	if min <= 0 {
-		min = DefaultDocCoverage
+	minCov := f.minCoverage
+	if minCov <= 0 {
+		minCov = DefaultDocCoverage
 	}
 	pct := float64(report.Documented) / float64(report.Total) * 100
-	if pct < min {
+	if pct < minCov {
 		return mend.Warn(report)
 	}
 	return mend.Pass(report)
@@ -75,7 +75,7 @@ func docCoverage(dir string) (mend.DocsReport, error) {
 		}
 		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 		if err != nil {
-			return nil // unparseable file is the build check's problem, not ours
+			return nil //nolint:nilerr // unparseable file is the build check's problem, not ours
 		}
 		rel, _ := filepath.Rel(dir, path)
 		scanDecls(file, fset, rel, &report)

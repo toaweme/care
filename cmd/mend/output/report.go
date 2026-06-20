@@ -164,23 +164,6 @@ func relativeTime(t time.Time) string {
 // tally counts run outcomes for a header or footer summary.
 type tally struct{ ok, warn, fail, skip int }
 
-func tallyOf(outputs []mend.Rendered) tally {
-	var t tally
-	for _, o := range outputs {
-		switch o.Status() {
-		case mend.StatusOK:
-			t.ok++
-		case mend.StatusWarn:
-			t.warn++
-		case mend.StatusFail:
-			t.fail++
-		case mend.StatusSkip:
-			t.skip++
-		}
-	}
-	return t
-}
-
 // statusMeta renders a tally as a colored, comma-separated breakdown that names
 // what each count is ("6 passed, 2 failed"), so the numbers are never ambiguous.
 // Zero categories are omitted.

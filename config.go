@@ -1,3 +1,5 @@
+// Package mend is the language-agnostic core: it models ecosystems, features, and
+// checks, runs them against a repo, and renders the unified typed results.
 package mend
 
 // Defaults returns a Config with sensible defaults applied.

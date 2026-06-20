@@ -1,3 +1,5 @@
+// Package git inspects a git repository's working-tree status, upstream sync
+// state, and identity header for mend's report.
 package git
 
 import (
@@ -126,6 +128,8 @@ func getGitSyncStatus(repoDir string) (SyncStatus, error) {
 	return SyncStatus{HasUpstream: false}, nil
 }
 
+// SyncStatus reports how the working tree's branch relates to its upstream,
+// returning a zero-value (no upstream) status when the directory is not a repo.
 func (p *Repo) SyncStatus() (SyncStatus, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {
@@ -151,6 +155,8 @@ func gitLine(repoDir string, args ...string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
+// Info returns the repository's identity header (branch, commit, commit count,
+// dirty and sync state, last commit time), best-effort per field.
 func (p *Repo) Info() (Info, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {
@@ -170,7 +176,10 @@ func (p *Repo) Info() (Info, error) {
 		info.Commit = commit
 	}
 	if count, err := gitLine(p.Dir, "rev-list", "--count", "HEAD"); err == nil {
-		fmt.Sscanf(count, "%d", &info.Commits)
+		// a malformed count just leaves Commits zero; not worth failing the header
+		if _, serr := fmt.Sscanf(count, "%d", &info.Commits); serr != nil {
+			info.Commits = 0
+		}
 	}
 	if when, err := gitLine(p.Dir, "log", "-1", "--format=%cI"); err == nil && when != "" {
 		if t, perr := time.Parse(time.RFC3339, when); perr == nil {
@@ -195,6 +204,8 @@ func (p *Repo) Info() (Info, error) {
 	return info, nil
 }
 
+// Status returns the working tree's changed files, or an empty slice when the
+// directory is not a git repository.
 func (p *Repo) Status() ([]File, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {

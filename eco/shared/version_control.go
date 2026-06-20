@@ -16,8 +16,8 @@ var _ mend.VersionControl = (*versionControl)(nil)
 // is language-agnostic (it shells out to git via internal/devops/git) and applies
 // to any repository.
 func NewVersionControl() mend.VersionControl {
-	git := mend.NewTool(mend.ToolSpec{Name: "git", Installer: mend.InstallerBuiltin})
-	return &versionControl{mend.NewBaseCheck("git", git)}
+	gitTool := mend.NewTool(mend.ToolSpec{Name: "git", Installer: mend.InstallerBuiltin})
+	return &versionControl{mend.NewBaseCheck("git", gitTool)}
 }
 
 func (f *versionControl) Applies(string) bool { return true }

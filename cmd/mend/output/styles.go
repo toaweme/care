@@ -2,6 +2,8 @@ package output
 
 import "github.com/charmbracelet/lipgloss"
 
+// HeaderStyle is the bold, accent-colored style for section headers; OKStyle,
+// WarnStyle, ErrorStyle, and DimStyle color check outcomes and secondary text.
 var (
 	HeaderStyle = lipgloss.NewStyle().
 			Bold(true).

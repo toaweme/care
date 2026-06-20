@@ -9,14 +9,7 @@ package templates
 
 import "embed"
 
+// FS is the embedded filesystem of canonical toaweme config and workflow templates.
+//
 //go:embed .golangci.yml .goreleaser.yml gitignore taskfile.library.yml taskfile.binary.yml taskfile.run.go.yml taskfile.test.go.yml .github/workflows licenses
 var FS embed.FS
-
-var files = map[string][]string{
-	"github.com/toaweme/mend/templates": {
-		".golangci.yml",
-	},
-}
-
-// ~/.mend/templates
-//

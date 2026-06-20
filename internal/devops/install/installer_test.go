@@ -61,7 +61,7 @@ func Test_Brew_Install(t *testing.T) {
 	runner := &mockRunner{lookPath: map[string]bool{"brew": true}}
 	b := Brew(WithRunner(runner), WithGOOS("darwin"))
 
-	if err := b.Install(context.Background(), Tool{Bin: "mytool", Brew: "mytool-brew"}); err != nil {
+	if err := b.Install(t.Context(), Tool{Bin: "mytool", Brew: "mytool-brew"}); err != nil {
 		t.Fatalf("Install() error = %v", err)
 	}
 	if len(runner.runCalls) != 1 {
@@ -75,7 +75,7 @@ func Test_Brew_Install(t *testing.T) {
 
 func Test_Brew_Install_NoFormula(t *testing.T) {
 	b := Brew(WithRunner(&mockRunner{lookPath: map[string]bool{"brew": true}}), WithGOOS("darwin"))
-	err := b.Install(context.Background(), Tool{Bin: "mytool"})
+	err := b.Install(t.Context(), Tool{Bin: "mytool"})
 	if err == nil || !contains(err.Error(), "no brew formula configured") {
 		t.Fatalf("want no-formula error, got %v", err)
 	}
@@ -104,7 +104,7 @@ func Test_Go_Install(t *testing.T) {
 	runner := &mockRunner{lookPath: map[string]bool{"go": true}}
 	g := Go(WithRunner(runner))
 
-	if err := g.Install(context.Background(), Tool{Bin: "mytool", GoPath: "example.com/mytool"}); err != nil {
+	if err := g.Install(t.Context(), Tool{Bin: "mytool", GoPath: "example.com/mytool"}); err != nil {
 		t.Fatalf("Install() error = %v", err)
 	}
 	if len(runner.runCalls) != 1 {
@@ -120,7 +120,7 @@ func Test_Go_Install_PinnedVersion(t *testing.T) {
 	runner := &mockRunner{lookPath: map[string]bool{"go": true}}
 	g := Go(WithRunner(runner))
 
-	if err := g.Install(context.Background(), Tool{Bin: "mytool", GoPath: "example.com/mytool", Version: "v1.2.3"}); err != nil {
+	if err := g.Install(t.Context(), Tool{Bin: "mytool", GoPath: "example.com/mytool", Version: "v1.2.3"}); err != nil {
 		t.Fatalf("Install() error = %v", err)
 	}
 	if got := runner.runCalls[0].args[1]; got != "example.com/mytool@v1.2.3" {
@@ -130,7 +130,7 @@ func Test_Go_Install_PinnedVersion(t *testing.T) {
 
 func Test_Go_Install_NoImportPath(t *testing.T) {
 	g := Go(WithRunner(&mockRunner{lookPath: map[string]bool{"go": true}}))
-	err := g.Install(context.Background(), Tool{Bin: "mytool"})
+	err := g.Install(t.Context(), Tool{Bin: "mytool"})
 	if err == nil || !contains(err.Error(), "no import path configured") {
 		t.Fatalf("want no-import-path error, got %v", err)
 	}

@@ -1,3 +1,5 @@
+// Package sync resolves file sources (local, embedded, remote) and writes them
+// into the working tree, honoring an existing-file/force rule.
 package sync
 
 import (

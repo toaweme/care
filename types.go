@@ -10,6 +10,7 @@ import (
 // each result so a single renderer can section the unified stream.
 type Phase string
 
+// Pipeline phases the runner tags each result with.
 const (
 	PhaseInstall Phase = "install" // ensuring a tool binary is present
 	PhaseRun     Phase = "run"     // running a check against a repo
@@ -19,6 +20,7 @@ const (
 // (empty) means nothing to provision.
 type Installer string
 
+// Installers the runner can provision a tool binary through.
 const (
 	InstallerBrew    Installer = "brew"       // homebrew formula
 	InstallerGo      Installer = "go-install" // go install <path>@<version>
@@ -121,17 +123,28 @@ type Check[T Report] interface {
 // bound to that feature's payload, so a slot can only hold the right kind of check
 // and a constructor returns a precisely typed value.
 type (
-	VersionControl  = Check[VCReport]
-	Build           = Check[BuildReport]
-	Quality         = Check[QualityReport]
-	Dependencies    = Check[DepsReport]
-	Runtime         = Check[RuntimeReport]
-	Docs            = Check[DocsReport]
-	Tests           = Check[TestReport]
-	Benchmark       = Check[BenchReport]
-	Secrets         = Check[SecretReport]
+	// VersionControl is the version-control feature's check interface.
+	VersionControl = Check[VCReport]
+	// Build is the build feature's check interface.
+	Build = Check[BuildReport]
+	// Quality is the lint feature's check interface.
+	Quality = Check[QualityReport]
+	// Dependencies is the dependencies feature's check interface.
+	Dependencies = Check[DepsReport]
+	// Runtime is the runtime feature's check interface.
+	Runtime = Check[RuntimeReport]
+	// Docs is the docs feature's check interface.
+	Docs = Check[DocsReport]
+	// Tests is the tests feature's check interface.
+	Tests = Check[TestReport]
+	// Benchmark is the benchmarks feature's check interface.
+	Benchmark = Check[BenchReport]
+	// Secrets is the secrets feature's check interface.
+	Secrets = Check[SecretReport]
+	// Vulnerabilities is the vulnerabilities feature's check interface.
 	Vulnerabilities = Check[VulnReport]
-	Fixer           = Check[FixReport]
+	// Fixer is the fixer feature's check interface.
+	Fixer = Check[FixReport]
 )
 
 // BaseCheck supplies the Name/Tools accessors and the default Applies (false:
@@ -147,7 +160,10 @@ func NewBaseCheck(name string, tools ...Tool) BaseCheck {
 	return BaseCheck{name: name, tools: tools}
 }
 
-func (b BaseCheck) Name() string  { return b.name }
+// Name returns the check's name.
+func (b BaseCheck) Name() string { return b.name }
+
+// Tools returns the tools the check needs installed.
 func (b BaseCheck) Tools() []Tool { return b.tools }
 
 // Applies defaults to false: a check must opt in to the repos it handles by
@@ -157,6 +173,7 @@ func (b BaseCheck) Applies(string) bool { return false }
 // Status is the outcome of running a check against a repo.
 type Status int
 
+// Outcome statuses a check can report.
 const (
 	StatusOK Status = iota
 	StatusWarn

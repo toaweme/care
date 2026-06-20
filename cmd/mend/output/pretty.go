@@ -8,8 +8,10 @@ import (
 // Pretty prints styled terminal output using lipgloss.
 type Pretty struct{}
 
+// NewPretty returns a Pretty renderer.
 func NewPretty() *Pretty { return &Pretty{} }
 
+// Section prints a styled section header with optional dim-separated meta segments.
 func (p *Pretty) Section(title string, meta ...string) {
 	line := HeaderStyle.Render(title)
 	for _, m := range meta {
@@ -31,6 +33,7 @@ func padRight(s string, width int) string {
 	return s + strings.Repeat(" ", width-len(s))
 }
 
+// CheckRow prints a check's summary line: status icon, label, and dim detail.
 func (p *Pretty) CheckRow(icon, label string, labelWidth int, detail string) {
 	if detail == "" {
 		fmt.Printf("%s %s\n", icon, label)
@@ -146,6 +149,7 @@ func renderCells(cells []string, widths []int) string {
 	return b.String()
 }
 
+// Newline prints a blank line.
 func (p *Pretty) Newline() {
 	fmt.Println()
 }

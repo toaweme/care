@@ -181,14 +181,14 @@ func snapshot(modPath, sumPath string) (mod, sum []byte, err error) {
 }
 
 func restore(modPath string, mod []byte, sumPath string, sum []byte) error {
-	if err := os.WriteFile(modPath, mod, 0o644); err != nil {
+	if err := os.WriteFile(modPath, mod, 0o644); err != nil { //nolint:gosec // go.mod must be world-readable
 		return fmt.Errorf("failed to restore go.mod: %w", err)
 	}
 	if sum == nil {
 		_ = os.Remove(sumPath)
 		return nil
 	}
-	if err := os.WriteFile(sumPath, sum, 0o644); err != nil {
+	if err := os.WriteFile(sumPath, sum, 0o644); err != nil { //nolint:gosec // go.sum must be world-readable
 		return fmt.Errorf("failed to restore go.sum: %w", err)
 	}
 	return nil

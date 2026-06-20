@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,7 +56,7 @@ type Result struct {
 func (e *Engine) Resolve(spec, fillName string) (Source, error) {
 	raw := strings.TrimSpace(spec)
 	if raw == "" {
-		return Source{}, fmt.Errorf("empty source spec")
+		return Source{}, errors.New("empty source spec")
 	}
 	for _, p := range e.providers {
 		src, ok, err := p.Resolve(raw)
@@ -98,7 +99,7 @@ func (e *Engine) Bytes(ctx context.Context, src Source) ([]byte, error) {
 // the existing-file/Force rule.
 func (e *Engine) Sync(ctx context.Context, req Request) (Result, error) {
 	if req.Dest == "" {
-		return Result{}, fmt.Errorf("no destination given (use --out)")
+		return Result{}, errors.New("no destination given (use --out)")
 	}
 	src, err := e.Resolve(req.Spec, filepath.Base(req.Dest))
 	if err != nil {
@@ -135,7 +136,7 @@ func WriteFile(dest string, content []byte, force bool) (bool, error) {
 			return false, fmt.Errorf("failed to create directory %q: %w", dir, err)
 		}
 	}
-	if err := os.WriteFile(dest, content, 0o644); err != nil {
+	if err := os.WriteFile(dest, content, 0o644); err != nil { //nolint:gosec // synced configs/templates (e.g. .golangci.yml) must stay world-readable
 		return false, fmt.Errorf("failed to write %q: %w", dest, err)
 	}
 	return true, nil

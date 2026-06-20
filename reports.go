@@ -3,6 +3,7 @@ package mend
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -26,6 +27,7 @@ type RepoFile struct {
 	Name   string `json:"name"`
 }
 
+// Summary renders the version-control state as a one-line terminal summary.
 func (r VCReport) Summary(int) string {
 	var parts []string
 	if len(r.Files) > 0 {
@@ -43,6 +45,7 @@ func (r VCReport) Summary(int) string {
 	return strings.Join(parts, ", ")
 }
 
+// Rows renders one row per changed file (status, path).
 func (r VCReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Files))
 	for _, file := range r.Files {
@@ -66,6 +69,7 @@ type QualityIssue struct {
 	Message  string `json:"message"`
 }
 
+// Summary renders the lint findings as a one-line terminal summary.
 func (r QualityReport) Summary(int) string {
 	if len(r.Issues) == 0 {
 		return "no issues"
@@ -129,6 +133,7 @@ type RuntimeDep struct {
 	Min     string `json:"min,omitempty"` // the dep's own declared runtime version
 }
 
+// Summary renders the dependency check as a one-line terminal summary.
 func (r DepsReport) Summary(verbosity int) string {
 	base := "tidy, no replace directives"
 	if len(r.Issues) > 0 {
@@ -145,6 +150,7 @@ func (r DepsReport) Summary(verbosity int) string {
 	return base
 }
 
+// Rows renders one row per dependency finding.
 func (r DepsReport) Rows(verbosity int) [][]string {
 	// findings always render (they are actionable, independent of verbosity); the
 	// full per-dependency runtime-version table is exhaustive detail, shown at -vv.
@@ -239,6 +245,7 @@ func (b Bound) String() string {
 	}
 }
 
+// Summary renders the runtime check as a one-line terminal summary.
 func (r RuntimeReport) Summary(int) string {
 	v := r.Version
 	// each version is labeled by what it is, so the line reads unambiguously:
@@ -266,6 +273,7 @@ func (r RuntimeReport) Summary(int) string {
 	return strings.Join(parts, " · ")
 }
 
+// Rows renders one row per runtime finding.
 func (r RuntimeReport) Rows(verbosity int) [][]string {
 	if verbosity < 1 {
 		return nil
@@ -373,6 +381,7 @@ type LineRange struct {
 	End   int `json:"end"`
 }
 
+// Summary renders the test results as a one-line terminal summary.
 func (r TestReport) Summary(int) string {
 	c := r.Cases
 	total := c.Passed + c.Failed + c.Skipped
@@ -386,7 +395,7 @@ func (r TestReport) Summary(int) string {
 	// a suite that fails to build carries no test cases, so report failing suites
 	// when the case tally would otherwise read all-green.
 	if fs := r.failedSuites(); fs > 0 && c.Failed == 0 {
-		parts = append(parts, fmt.Sprintf("%s failed to build", plural(fs, "suite", "suites")))
+		parts = append(parts, plural(fs, "suite", "suites")+" failed to build")
 	}
 	if r.WithCoverage {
 		parts = append(parts, fmt.Sprintf("%.1f%% coverage", r.Total))
@@ -563,10 +572,12 @@ type BenchMetric struct {
 	Value float64 `json:"value"`
 }
 
+// Summary renders the benchmark results as a one-line terminal summary.
 func (r BenchReport) Summary(int) string {
 	return plural(len(r.Benchmarks), "benchmark", "benchmarks")
 }
 
+// Rows renders one row per benchmark result.
 func (r BenchReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Benchmarks))
 	for _, b := range r.Benchmarks {
@@ -609,16 +620,18 @@ type SecretFinding struct {
 	Tags        []string `json:"tags,omitempty"`
 }
 
+// Summary renders the secret-scan findings as a one-line terminal summary.
 func (r SecretReport) Summary(int) string {
 	return plural(len(r.Findings), "secret", "secrets")
 }
 
+// Rows renders one row per detected secret.
 func (r SecretReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Findings))
 	for _, f := range r.Findings {
 		loc := "-"
 		if f.Line > 0 {
-			loc = fmt.Sprintf("%d", f.Line)
+			loc = strconv.Itoa(f.Line)
 		}
 		rows = append(rows, []string{f.Rule, f.File, loc})
 	}
@@ -651,10 +664,12 @@ type VulnFrame struct {
 	Function string `json:"function,omitempty"`
 }
 
+// Summary renders the vulnerability findings as a one-line terminal summary.
 func (r VulnReport) Summary(int) string {
 	return plural(len(r.Findings), "vulnerability", "vulnerabilities")
 }
 
+// Rows renders one row per vulnerability finding.
 func (r VulnReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Findings))
 	for _, v := range r.Findings {
@@ -684,6 +699,7 @@ type BuildError struct {
 	Message string `json:"message"`
 }
 
+// Summary renders the build result as a one-line terminal summary.
 func (r BuildReport) Summary(int) string {
 	if len(r.Errors) == 0 {
 		return "compiles"
@@ -691,6 +707,7 @@ func (r BuildReport) Summary(int) string {
 	return plural(len(r.Errors), "error", "errors")
 }
 
+// Rows renders one row per build finding.
 func (r BuildReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Errors))
 	for _, e := range r.Errors {
@@ -715,6 +732,7 @@ type DocSymbol struct {
 	Name string `json:"name"`
 }
 
+// Summary renders the docs check as a one-line terminal summary.
 func (r DocsReport) Summary(int) string {
 	if r.Total == 0 {
 		return "no exported symbols"
@@ -754,7 +772,7 @@ func lineCol(line, col int) string {
 	if col > 0 {
 		return fmt.Sprintf("%d:%d", line, col)
 	}
-	return fmt.Sprintf("%d", line)
+	return strconv.Itoa(line)
 }
 
 // FixReport lists the fixes a Fixer applied across the fixable features.
@@ -769,6 +787,7 @@ type FixResult struct {
 	Detail  string `json:"detail,omitempty"`
 }
 
+// Summary renders the fixer result as a one-line terminal summary.
 func (r FixReport) Summary(int) string {
 	var changed int
 	for _, f := range r.Fixes {
@@ -779,6 +798,7 @@ func (r FixReport) Summary(int) string {
 	return fmt.Sprintf("%d applied", changed)
 }
 
+// Rows renders one row per fix applied.
 func (r FixReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Fixes))
 	for _, f := range r.Fixes {

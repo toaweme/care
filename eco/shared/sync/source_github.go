@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -41,7 +42,7 @@ func (githubProvider) Resolve(spec string) (Source, bool, error) {
 func githubFromRaw(rest string) (Source, bool, error) {
 	parts := splitClean(rest)
 	if len(parts) < 2 {
-		return Source{}, false, fmt.Errorf("github raw url must name at least owner/repo")
+		return Source{}, false, errors.New("github raw url must name at least owner/repo")
 	}
 	if len(parts) == 2 {
 		return githubBareRepo(parts[0], parts[1]), true, nil
@@ -53,7 +54,7 @@ func githubFromRaw(rest string) (Source, bool, error) {
 func githubFromWeb(rest string) (Source, bool, error) {
 	parts := splitClean(rest)
 	if len(parts) < 2 {
-		return Source{}, false, fmt.Errorf("github url must name at least owner/repo")
+		return Source{}, false, errors.New("github url must name at least owner/repo")
 	}
 	owner, repo := parts[0], parts[1]
 	if len(parts) == 2 {

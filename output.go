@@ -47,18 +47,41 @@ func Errored[T Report](note string, err error) Output[T] {
 	return Output[T]{status: StatusFail, note: note, err: err}
 }
 
-func (o Output[T]) Phase() Phase      { return o.phase }
-func (o Output[T]) Feature() string   { return o.feature }
-func (o Output[T]) Check() string     { return o.check }
-func (o Output[T]) Tool() string      { return o.tool }
-func (o Output[T]) Profile() string   { return o.profile }
-func (o Output[T]) Dir() string       { return o.dir }
-func (o Output[T]) Status() Status    { return o.status }
-func (o Output[T]) Err() error        { return o.err }
-func (o Output[T]) DurationMs() int64 { return o.durationMs }
-func (o Output[T]) Version() string   { return "" }
-func (o Output[T]) Source() string    { return "" }
+// Phase returns the pipeline stage this result belongs to.
+func (o Output[T]) Phase() Phase { return o.phase }
 
+// Feature returns the language-agnostic feature this result was produced for.
+func (o Output[T]) Feature() string { return o.feature }
+
+// Check returns the name of the check that produced this result.
+func (o Output[T]) Check() string { return o.check }
+
+// Tool returns the name of the tool this result ran through.
+func (o Output[T]) Tool() string { return o.tool }
+
+// Profile returns the run-profile name this result ran under.
+func (o Output[T]) Profile() string { return o.profile }
+
+// Dir returns the repo directory this result was produced in.
+func (o Output[T]) Dir() string { return o.dir }
+
+// Status returns the outcome status of this result.
+func (o Output[T]) Status() Status { return o.status }
+
+// Err returns the underlying error for a tool-failure outcome, or nil.
+func (o Output[T]) Err() error { return o.err }
+
+// DurationMs returns how long the check took, in milliseconds.
+func (o Output[T]) DurationMs() int64 { return o.durationMs }
+
+// Version returns the tool version for this result (empty for typed outputs).
+func (o Output[T]) Version() string { return "" }
+
+// Source returns the result source (empty for typed outputs).
+func (o Output[T]) Source() string { return "" }
+
+// Summary renders the result's payload as a one-line terminal summary, or the note
+// when there is no rich payload.
 func (o Output[T]) Summary(verbosity int) string {
 	if !o.hasData {
 		return o.note
@@ -66,6 +89,7 @@ func (o Output[T]) Summary(verbosity int) string {
 	return o.data.Summary(verbosity)
 }
 
+// Rows renders the result's payload as detail rows, or nil when there is no payload.
 func (o Output[T]) Rows(verbosity int) [][]string {
 	if !o.hasData {
 		return nil

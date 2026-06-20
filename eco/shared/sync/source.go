@@ -63,12 +63,13 @@ func (s Source) String() string {
 		return s.path
 	case kindEmbed:
 		return s.name + " (embedded)"
-	}
-	switch {
-	case s.url != "":
-		return s.url
-	case s.fillPrefix != "":
-		return s.fillPrefix + "<file>"
+	case kindRemote:
+		switch {
+		case s.url != "":
+			return s.url
+		case s.fillPrefix != "":
+			return s.fillPrefix + "<file>"
+		}
 	}
 	return s.Raw
 }

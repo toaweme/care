@@ -33,8 +33,10 @@ func (f *fixer) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.Out
 	if hasGolangciConfig(dir) {
 		report.Fixes = append(report.Fixes, run(ctx, f.golangci, dir, "golangci-lint --fix", "run", "--fix", "./..."))
 	}
-	report.Fixes = append(report.Fixes, run(ctx, f.gotool, dir, "gofmt", "fmt", "./..."))
-	report.Fixes = append(report.Fixes, run(ctx, f.gotool, dir, "go mod tidy", "mod", "tidy"))
+	report.Fixes = append(report.Fixes,
+		run(ctx, f.gotool, dir, "gofmt", "fmt", "./..."),
+		run(ctx, f.gotool, dir, "go mod tidy", "mod", "tidy"),
+	)
 
 	return mend.Pass(report)
 }
