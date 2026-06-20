@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/toaweme/mend"
 )
@@ -37,22 +38,30 @@ func (f *vulnCheck) Run(ctx context.Context, dir string, _ mend.RunOptions) mend
 	}
 	args = append(args, "./...")
 	out, err := f.tool.ExecStdout(ctx, dir, args...)
-	findings := parseGovulncheckJSON(out)
-	if len(findings) > 0 {
-		return mend.Fail(mend.VulnReport{Findings: findings})
+	report := mend.VulnReport{Findings: parseGovulncheckJSON(out, ModulePath(dir))}
+	// govulncheck exits non-zero whenever it finds any vulnerability (toolchain
+	// included), so a non-zero err alongside findings is the normal "found something"
+	// signal, not a tool failure. Only an empty result with a non-zero err is a real
+	// failure to run. Runtime (stdlib) findings are informational: they track the
+	// installed Go toolchain, not the code, so they never fail the check.
+	if report.Actionable() > 0 {
+		return mend.Fail(report)
 	}
-	if err != nil {
+	if err != nil && len(report.Findings) == 0 {
 		return mend.Errored[mend.VulnReport]("tool failed", fmt.Errorf("failed to run govulncheck: %w\n%s", err, trimOutput(out)))
 	}
-	return mend.Pass(mend.VulnReport{})
+	return mend.Pass(report)
 }
 
 // parseGovulncheckJSON distills govulncheck's `-json` message stream into one
 // VulnFinding per OSV id, keeping only vulnerabilities the code actually calls (a
 // finding with a symbol-level trace frame). Imports-only findings, which
 // govulncheck reports separately as non-actionable, are dropped so the report
-// matches govulncheck's "your code is affected by" set.
-func parseGovulncheckJSON(out []byte) []mend.VulnFinding {
+// matches govulncheck's "your code is affected by" set. Each kept finding is tagged
+// by origin (mod is the caller's own module path): a stdlib finding is VulnRuntime
+// (a toolchain property, informational), a finding in the module's own code is
+// VulnCode, and everything else is VulnDeps.
+func parseGovulncheckJSON(out []byte, mod string) []mend.VulnFinding {
 	dec := json.NewDecoder(bytes.NewReader(out))
 	summaries := make(map[string]string)
 	called := make(map[string]mend.VulnFinding)
@@ -91,7 +100,7 @@ func parseGovulncheckJSON(out []byte) []mend.VulnFinding {
 			trace = append(trace, mend.VulnFrame{Module: fr.Module, Version: fr.Version, Package: fr.Package, Function: fr.Function})
 		}
 		called[msg.Finding.OSV] = mend.VulnFinding{
-			ID: msg.Finding.OSV, Package: t.Package, Found: t.Version, Fixed: msg.Finding.FixedVersion, Symbol: t.Function, Trace: trace,
+			ID: msg.Finding.OSV, Category: vulnCategory(t.Module, mod), Package: t.Package, Found: t.Version, Fixed: msg.Finding.FixedVersion, Symbol: t.Function, Trace: trace,
 		}
 	}
 	findings := make([]mend.VulnFinding, 0, len(called))
@@ -101,4 +110,18 @@ func parseGovulncheckJSON(out []byte) []mend.VulnFinding {
 	}
 	sort.Slice(findings, func(i, j int) bool { return findings[i].ID < findings[j].ID })
 	return findings
+}
+
+// vulnCategory classifies a finding by the module its affected symbol lives in:
+// the Go stdlib is a toolchain (runtime) concern, the caller's own module (or a
+// submodule of it) is own-code, and anything else is a third-party dependency.
+func vulnCategory(module, mod string) string {
+	switch {
+	case module == "stdlib":
+		return mend.VulnRuntime
+	case mod != "" && (module == mod || strings.HasPrefix(module, mod+"/")):
+		return mend.VulnCode
+	default:
+		return mend.VulnDeps
+	}
 }

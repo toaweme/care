@@ -638,23 +638,54 @@ func (r SecretReport) Rows(int) [][]string {
 	return rows
 }
 
-// VulnReport lists the vulnerabilities the code is affected by.
+// Vulnerability origin categories. A finding's category decides whether it is
+// actionable against the code (deps, code) or merely informational because it
+// tracks the installed Go toolchain rather than the project (runtime).
+const (
+	// VulnDeps is a vulnerability in a third-party dependency the code calls.
+	VulnDeps = "deps"
+	// VulnCode is a vulnerability in the module's own code.
+	VulnCode = "code"
+	// VulnRuntime is a stdlib vulnerability, a property of the installed Go
+	// toolchain version rather than the project; informational, never failing.
+	VulnRuntime = "runtime"
+)
+
+// VulnReport lists the vulnerabilities the code is affected by, bucketed by origin
+// via each finding's Category (deps/code are actionable; runtime is informational).
 type VulnReport struct {
 	Findings []VulnFinding `json:"findings,omitempty"`
 }
 
-// VulnFinding is one structured vulnerability: the OSV id, the affected package and
-// the versions found vs fixed, a one-line summary, the symbol the code reaches, and
-// the call-chain trace.
+// VulnFinding is one structured vulnerability: the OSV id, its origin category, the
+// affected package and the versions found vs fixed, a one-line summary, the symbol
+// the code reaches, and the call-chain trace.
 type VulnFinding struct {
-	ID      string      `json:"id"`
-	Package string      `json:"package,omitempty"`
-	Found   string      `json:"found,omitempty"`
-	Fixed   string      `json:"fixed,omitempty"`
-	Summary string      `json:"summary,omitempty"`
-	Symbol  string      `json:"symbol,omitempty"`
-	Trace   []VulnFrame `json:"trace,omitempty"`
+	ID       string      `json:"id"`
+	Category string      `json:"category,omitempty"`
+	Package  string      `json:"package,omitempty"`
+	Found    string      `json:"found,omitempty"`
+	Fixed    string      `json:"fixed,omitempty"`
+	Summary  string      `json:"summary,omitempty"`
+	Symbol   string      `json:"symbol,omitempty"`
+	Trace    []VulnFrame `json:"trace,omitempty"`
 }
+
+// Actionable counts the findings that reflect on the code itself (dependency and
+// own-code vulnerabilities), the set that fails the check and drives the rating.
+func (r VulnReport) Actionable() int {
+	n := 0
+	for _, v := range r.Findings {
+		if v.Category != VulnRuntime {
+			n++
+		}
+	}
+	return n
+}
+
+// RuntimeVulns counts the stdlib findings tied to the installed Go toolchain. They
+// are surfaced for visibility but never fail the check or affect the rating.
+func (r VulnReport) RuntimeVulns() int { return len(r.Findings) - r.Actionable() }
 
 // VulnFrame is one frame of a vulnerability's call-chain trace.
 type VulnFrame struct {
@@ -664,25 +695,49 @@ type VulnFrame struct {
 	Function string `json:"function,omitempty"`
 }
 
-// Summary renders the vulnerability findings as a one-line terminal summary.
+// Summary renders the vulnerability findings as a one-line terminal summary: the
+// actionable count drives the headline noun, with the informational go-toolchain
+// count appended so it stays visible even when the check passes.
 func (r VulnReport) Summary(int) string {
-	return plural(len(r.Findings), "vulnerability", "vulnerabilities")
+	s := plural(r.Actionable(), "vulnerability", "vulnerabilities")
+	if rt := r.RuntimeVulns(); rt > 0 {
+		s += fmt.Sprintf(" (+%d in go toolchain)", rt)
+	}
+	return s
 }
 
-// Rows renders one row per vulnerability finding.
+// Rows renders one row per vulnerability finding, actionable ones first and the
+// informational go-toolchain findings last.
 func (r VulnReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Findings))
 	for _, v := range r.Findings {
-		var ver string
-		switch {
-		case v.Found != "" && v.Fixed != "":
-			ver = v.Found + " -> " + v.Fixed
-		case v.Found != "":
-			ver = v.Found + " (no fix)"
+		if v.Category != VulnRuntime {
+			rows = append(rows, vulnRow(v))
 		}
-		rows = append(rows, []string{v.ID, v.Package, ver, v.Summary})
+	}
+	for _, v := range r.Findings {
+		if v.Category == VulnRuntime {
+			rows = append(rows, vulnRow(v))
+		}
 	}
 	return rows
+}
+
+// vulnRow renders a single finding as a table row, tagging a go-toolchain finding
+// so it reads as a runtime concern rather than a code/dependency one.
+func vulnRow(v VulnFinding) []string {
+	var ver string
+	switch {
+	case v.Found != "" && v.Fixed != "":
+		ver = v.Found + " -> " + v.Fixed
+	case v.Found != "":
+		ver = v.Found + " (no fix)"
+	}
+	summary := v.Summary
+	if v.Category == VulnRuntime {
+		summary = strings.TrimSpace("go toolchain: " + summary)
+	}
+	return []string{v.ID, v.Package, ver, summary}
 }
 
 // BuildReport is the compile state of the repo: the compiler errors `go build`

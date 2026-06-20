@@ -96,7 +96,7 @@ func Test_Resolve_LocalPath(t *testing.T) {
 
 	// an absolute path and an existing bare name both resolve to the local file.
 	for _, spec := range []string{file, "./" + filepath.Base(file)} {
-		t.Run(spec, func(t *testing.T) {
+		t.Run("", func(t *testing.T) {
 			if spec[0] == '.' {
 				t.Chdir(dir)
 			}

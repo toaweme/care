@@ -93,7 +93,9 @@ func (h *Health) accrueMetrics(o mend.Rendered) {
 	case mend.SecretReport:
 		h.Metrics.Secrets += len(d.Findings)
 	case mend.VulnReport:
-		h.Metrics.Vulns += len(d.Findings)
+		// only code/dependency vulns count toward the headline; go-toolchain findings
+		// are informational and tracked on the check payload, not the health metric.
+		h.Metrics.Vulns += d.Actionable()
 	case mend.BuildReport:
 		h.Metrics.Issues += len(d.Errors)
 	case mend.QualityReport:
