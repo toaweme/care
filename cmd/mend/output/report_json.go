@@ -21,7 +21,9 @@ type RunInfo struct {
 
 // VCInfo is the repo's version-control identity for the report header: the current
 // branch and commit, the total commit count on HEAD, whether the tree is dirty, the
-// upstream sync state, and when HEAD was committed.
+// upstream sync state, when HEAD was committed, and when the working tree was last
+// touched. TouchedAt is the newest uncommitted-file mtime, the repo-level "last
+// worked on" signal; it is absent when the tree is clean.
 type VCInfo struct {
 	Branch      string     `json:"branch,omitempty"`
 	Commit      string     `json:"commit,omitempty"`
@@ -30,7 +32,12 @@ type VCInfo struct {
 	HasUpstream bool       `json:"has_upstream"`
 	Ahead       int        `json:"ahead,omitempty"`
 	Behind      int        `json:"behind,omitempty"`
-	LastCommit  *time.Time `json:"last_commit,omitempty"`
+	CommittedAt *time.Time `json:"committed_at,omitempty"`
+	TouchedAt   *time.Time `json:"touched_at,omitempty"`
+	// LinesAdded / LinesDeleted are the repo's total uncommitted line delta against
+	// HEAD, the quick "how much is in flight" signal for a dashboard.
+	LinesAdded   int `json:"lines_added,omitempty"`
+	LinesDeleted int `json:"lines_deleted,omitempty"`
 }
 
 // ToolResult is one install-phase tool outcome: the resolved tool identity, its

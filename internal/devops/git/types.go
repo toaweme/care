@@ -15,10 +15,19 @@ const (
 	Renamed
 )
 
-// File is one file reported by git status: its name and working-tree state.
+// File is one file reported by git status: its working-tree state, its basename
+// and repo-root-relative path, when it was last touched on disk, and how many lines
+// it added/deleted relative to HEAD. ModTime is the filesystem mtime of the
+// working-tree file; it is zero for a deleted file (no file to stat) or when the
+// stat fails. Added/Deleted are the uncommitted line delta (an untracked file counts
+// every line as added); both are zero for a binary file or when the diff is unknown.
 type File struct {
-	Name   string
-	Status FileStatus
+	Name    string
+	Path    string
+	Status  FileStatus
+	ModTime time.Time
+	Added   int
+	Deleted int
 }
 
 // StatusString returns the file's working-tree state as a lowercase word.
@@ -55,8 +64,9 @@ func (s SyncStatus) InSync() bool {
 
 // Info is a repository's identity and state for the report header: the current
 // branch and commit, how many commits HEAD carries, whether the tree is dirty, its
-// sync state, and when HEAD was committed. A zero LastCommit means it could not be
-// read (e.g. an empty repo).
+// sync state, when HEAD was committed, and when the working tree was last touched. A
+// zero CommittedAt means it could not be read (e.g. an empty repo); a zero TouchedAt
+// means the tree is clean (no uncommitted file to date).
 type Info struct {
 	Branch      string
 	Commit      string
@@ -65,7 +75,12 @@ type Info struct {
 	HasUpstream bool
 	Ahead       int
 	Behind      int
-	LastCommit  time.Time
+	CommittedAt time.Time
+	TouchedAt   time.Time
+	// LinesAdded / LinesDeleted are the uncommitted line delta summed across the
+	// working tree (the changes a single commit would record against HEAD).
+	LinesAdded   int
+	LinesDeleted int
 }
 
 // Repository provides read-only inspection of a git repository: working-tree

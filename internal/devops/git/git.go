@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -48,6 +49,8 @@ func getGitChangedFiles(repoDir string) ([]File, error) {
 		return nil, err
 	}
 
+	stat := getGitDiffStat(filepath.Clean(repoDir))
+
 	var files []File
 	for _, line := range strings.Split(out.String(), "\n") {
 		line = strings.TrimSpace(line)
@@ -64,13 +67,87 @@ func getGitChangedFiles(repoDir string) ([]File, error) {
 		}
 		statusCode := strings.TrimSpace(parts[0])
 		filePath := strings.TrimSpace(parts[1])
-		files = append(files, File{
+		file := File{
 			Name:   filepath.Base(filePath),
+			Path:   filePath,
 			Status: parseStatus(statusCode),
-		})
+		}
+		// the working-tree mtime is the "last touched" signal; a deleted file has
+		// nothing to stat, so its ModTime stays zero.
+		if st, err := os.Stat(filepath.Join(repoDir, filePath)); err == nil {
+			file.ModTime = st.ModTime()
+		}
+		// the line delta comes from the diff against HEAD; an untracked file is not in
+		// that diff, so every line it carries counts as added.
+		if ls, ok := stat[filePath]; ok {
+			file.Added, file.Deleted = ls.added, ls.deleted
+		} else if file.Status == Untracked {
+			file.Added = countLines(filepath.Join(repoDir, filePath))
+		}
+		files = append(files, file)
 	}
 
 	return files, nil
+}
+
+// lineStat is one path's added/deleted line counts in the diff against HEAD.
+type lineStat struct{ added, deleted int }
+
+// getGitDiffStat returns the per-path uncommitted line delta against HEAD (staged
+// and unstaged), keyed by repo-root-relative path. Rename detection is on (-M), so a
+// renamed-and-edited file reports its real intra-file delta (not a whole-file
+// add/delete), keyed by the new path to match the status entry. Binary files report
+// no counts and are left zero. A repo with no HEAD (or any failure) yields a nil map.
+func getGitDiffStat(repoDir string) map[string]lineStat {
+	var out bytes.Buffer
+	cmd := exec.Command("git", "diff", "HEAD", "--numstat", "-M", "-z")
+	cmd.Dir = filepath.Clean(repoDir)
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return nil
+	}
+
+	stats := make(map[string]lineStat)
+	// -z emits NUL-terminated records. a normal record is one token
+	// "added\tdeleted\tpath"; a rename splits across three tokens, the first being
+	// "added\tdeleted\t" (empty path) followed by the old then the new path.
+	tokens := strings.Split(out.String(), "\x00")
+	for i := 0; i < len(tokens); i++ {
+		fields := strings.SplitN(tokens[i], "\t", 3)
+		if len(fields) != 3 {
+			continue
+		}
+		// a binary file reports "-" for both counts; Atoi fails and leaves it zero.
+		added, _ := strconv.Atoi(fields[0])
+		deleted, _ := strconv.Atoi(fields[1])
+		path := fields[2]
+		if path == "" && i+2 < len(tokens) {
+			// rename/copy: key by the new path so it matches the status entry, which
+			// keeps the new name; skip the consumed old/new path tokens.
+			path = tokens[i+2]
+			i += 2
+		}
+		if path == "" {
+			continue
+		}
+		stats[path] = lineStat{added: added, deleted: deleted}
+	}
+	return stats
+}
+
+// countLines counts the lines in a file, treating a final line without a trailing
+// newline as a line. It returns 0 when the path cannot be read (e.g. an untracked
+// directory entry).
+func countLines(path string) int {
+	data, err := os.ReadFile(path)
+	if err != nil || len(data) == 0 {
+		return 0
+	}
+	n := bytes.Count(data, []byte{'\n'})
+	if data[len(data)-1] != '\n' {
+		n++
+	}
+	return n
 }
 
 func parseStatus(code string) FileStatus {
@@ -156,7 +233,8 @@ func gitLine(repoDir string, args ...string) (string, error) {
 }
 
 // Info returns the repository's identity header (branch, commit, commit count,
-// dirty and sync state, last commit time), best-effort per field.
+// dirty and sync state, commit time, and working-tree touched time), best-effort
+// per field.
 func (p *Repo) Info() (Info, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {
@@ -183,7 +261,7 @@ func (p *Repo) Info() (Info, error) {
 	}
 	if when, err := gitLine(p.Dir, "log", "-1", "--format=%cI"); err == nil && when != "" {
 		if t, perr := time.Parse(time.RFC3339, when); perr == nil {
-			info.LastCommit = t
+			info.CommittedAt = t
 		}
 	}
 
@@ -192,6 +270,15 @@ func (p *Repo) Info() (Info, error) {
 		return info, fmt.Errorf("failed to get git changed files: %w", err)
 	}
 	info.Dirty = len(files) > 0
+	// touched-at is the newest working-tree mtime: when this repo was last worked on.
+	// it stays zero for a clean tree so a consumer can sort it out of the active set.
+	for _, f := range files {
+		if f.ModTime.After(info.TouchedAt) {
+			info.TouchedAt = f.ModTime
+		}
+		info.LinesAdded += f.Added
+		info.LinesDeleted += f.Deleted
+	}
 
 	sync, err := getGitSyncStatus(p.Dir)
 	if err != nil {

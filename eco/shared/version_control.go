@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/toaweme/mend"
 	"github.com/toaweme/mend/internal/devops/git"
@@ -37,8 +38,22 @@ func (f *versionControl) Run(_ context.Context, dir string, _ mend.RunOptions) m
 	}
 	rf := make([]mend.RepoFile, 0, len(files))
 	for _, file := range files {
-		rf = append(rf, mend.RepoFile{Status: file.StatusString(), Name: file.Name})
+		entry := mend.RepoFile{Status: file.StatusString(), Name: file.Name, Path: file.Path, Added: file.Added, Deleted: file.Deleted}
+		if !file.ModTime.IsZero() {
+			t := file.ModTime
+			entry.TouchedAt = &t
+		}
+		rf = append(rf, entry)
 	}
+	// order most-recently-touched first so the report (terminal and JSON) reads as a
+	// worklog; files with no mtime (deleted) sort last.
+	sort.SliceStable(rf, func(i, j int) bool {
+		ti, tj := rf[i].TouchedAt, rf[j].TouchedAt
+		if ti == nil || tj == nil {
+			return ti != nil && tj == nil
+		}
+		return ti.After(*tj)
+	})
 	report := mend.VCReport{Files: rf, HasUpstream: sync.HasUpstream}
 	if sync.HasUpstream {
 		report.Ahead = sync.Ahead

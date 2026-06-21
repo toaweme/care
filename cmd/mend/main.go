@@ -109,17 +109,23 @@ func resolveVC(dir string) *output.VCInfo {
 		return nil
 	}
 	vc := &output.VCInfo{
-		Branch:      info.Branch,
-		Commit:      info.Commit,
-		Commits:     info.Commits,
-		Dirty:       info.Dirty,
-		HasUpstream: info.HasUpstream,
-		Ahead:       info.Ahead,
-		Behind:      info.Behind,
+		Branch:       info.Branch,
+		Commit:       info.Commit,
+		Commits:      info.Commits,
+		Dirty:        info.Dirty,
+		HasUpstream:  info.HasUpstream,
+		Ahead:        info.Ahead,
+		Behind:       info.Behind,
+		LinesAdded:   info.LinesAdded,
+		LinesDeleted: info.LinesDeleted,
 	}
-	if !info.LastCommit.IsZero() {
-		t := info.LastCommit
-		vc.LastCommit = &t
+	if !info.CommittedAt.IsZero() {
+		t := info.CommittedAt
+		vc.CommittedAt = &t
+	}
+	if !info.TouchedAt.IsZero() {
+		t := info.TouchedAt
+		vc.TouchedAt = &t
 	}
 	return vc
 }

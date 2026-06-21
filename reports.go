@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // This file is the wire contract and the living documentation of what mend checks:
@@ -21,17 +22,30 @@ type VCReport struct {
 	Behind      int        `json:"behind,omitempty"`
 }
 
-// RepoFile is one changed file in the working tree: a short status word and the path.
+// RepoFile is one changed file in the working tree: a short status word, the
+// basename and repo-root-relative path, and when it was last touched on disk.
+// TouchedAt is the filesystem mtime, the per-file "last worked on" signal that lets
+// a consumer order changed files by recency; it is absent for a deleted file.
 type RepoFile struct {
-	Status string `json:"status"`
-	Name   string `json:"name"`
+	Status    string     `json:"status"`
+	Name      string     `json:"name"`
+	Path      string     `json:"path,omitempty"`
+	TouchedAt *time.Time `json:"touched_at,omitempty"`
+	// Added / Deleted are the file's uncommitted line delta against HEAD (an
+	// untracked file counts every line as added); both are zero for a binary file.
+	Added   int `json:"added,omitempty"`
+	Deleted int `json:"deleted,omitempty"`
 }
 
 // Summary renders the version-control state as a one-line terminal summary.
 func (r VCReport) Summary(int) string {
 	var parts []string
 	if len(r.Files) > 0 {
-		parts = append(parts, fmt.Sprintf("%d uncommitted", len(r.Files)))
+		uncommitted := fmt.Sprintf("%d uncommitted", len(r.Files))
+		if delta := lineDelta(r.lineTotals()); delta != "" {
+			uncommitted += " (" + delta + ")"
+		}
+		parts = append(parts, uncommitted)
 	}
 	if r.HasUpstream && (r.Ahead != 0 || r.Behind != 0) {
 		parts = append(parts, fmt.Sprintf("unpushed +%d -%d", r.Ahead, r.Behind))
@@ -45,13 +59,52 @@ func (r VCReport) Summary(int) string {
 	return strings.Join(parts, ", ")
 }
 
-// Rows renders one row per changed file (status, path).
+// Rows renders one row per changed file (status, name, line delta, how long ago it
+// was touched), in the report's most-recently-touched-first order.
 func (r VCReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Files))
 	for _, file := range r.Files {
-		rows = append(rows, []string{file.Status, file.Name})
+		age := ""
+		if file.TouchedAt != nil {
+			age = relativeAge(*file.TouchedAt)
+		}
+		rows = append(rows, []string{file.Status, file.Name, lineDelta(file.Added, file.Deleted), age})
 	}
 	return rows
+}
+
+// lineTotals sums the uncommitted line delta across all changed files.
+func (r VCReport) lineTotals() (added, deleted int) {
+	for _, f := range r.Files {
+		added += f.Added
+		deleted += f.Deleted
+	}
+	return added, deleted
+}
+
+// lineDelta renders an added/deleted line count as "+12 -3", or "" when there is
+// nothing to show (a binary file, or an unknown delta).
+func lineDelta(added, deleted int) string {
+	if added == 0 && deleted == 0 {
+		return ""
+	}
+	return fmt.Sprintf("+%d -%d", added, deleted)
+}
+
+// relativeAge renders how long ago t was, coarsely ("2h ago"), for the changed-file
+// rows. It mirrors the header's relative time so the report reads consistently.
+func relativeAge(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	}
 }
 
 // QualityReport is the linter findings for one repo.

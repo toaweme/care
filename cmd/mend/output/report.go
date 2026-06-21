@@ -111,7 +111,8 @@ func gradeStyle(verdict string) lipgloss.Style {
 }
 
 // vcMeta renders the version-control identity line: branch, short commit, commit
-// count, dirty/clean, unpushed delta, and how long ago HEAD was committed.
+// count, dirty/clean, unpushed delta, and how long ago the tree was last touched
+// (dirty) or HEAD was committed (clean).
 func vcMeta(vc *VCInfo) string {
 	if vc == nil || vc.Branch == "" {
 		return ""
@@ -124,15 +125,23 @@ func vcMeta(vc *VCInfo) string {
 		parts = append(parts, plural(vc.Commits, "commit", "commits"))
 	}
 	if vc.Dirty {
-		parts = append(parts, "dirty")
+		dirty := "dirty"
+		if vc.LinesAdded != 0 || vc.LinesDeleted != 0 {
+			dirty += fmt.Sprintf(" +%d -%d", vc.LinesAdded, vc.LinesDeleted)
+		}
+		parts = append(parts, dirty)
 	} else {
 		parts = append(parts, "clean")
 	}
 	if vc.HasUpstream && (vc.Ahead != 0 || vc.Behind != 0) {
 		parts = append(parts, fmt.Sprintf("+%d -%d", vc.Ahead, vc.Behind))
 	}
-	if vc.LastCommit != nil {
-		parts = append(parts, relativeTime(*vc.LastCommit))
+	// a dirty tree reads by when it was last touched (active work); a clean tree by
+	// when it was last committed.
+	if vc.Dirty && vc.TouchedAt != nil {
+		parts = append(parts, "touched "+relativeTime(*vc.TouchedAt))
+	} else if vc.CommittedAt != nil {
+		parts = append(parts, relativeTime(*vc.CommittedAt))
 	}
 	return strings.Join(parts, DimStyle.Render(" · "))
 }
