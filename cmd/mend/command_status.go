@@ -183,12 +183,19 @@ func mapEcosystemConfigs(in StatusFlags) (mend.EcosystemConfig, mend.RunOptions)
 		Vulnerabilities: in.Security,
 	}
 	coverage := in.Coverage
-	if !in.Git && !in.Quality && !in.Tests && !in.Coverage && !in.Security && !in.Bench {
+	allOff := !in.Git && !in.Quality && !in.Tests && !in.Coverage && !in.Security && !in.Bench
+	if allOff {
 		cfg = mend.EcosystemConfig{
-			VersionControl: true,
-			Build:          true, Quality: true, Dependencies: true, Runtime: true, Docs: true,
-			Tests: true, Benchmark: true,
-			Secrets: true, Vulnerabilities: true,
+			VersionControl:  true,
+			Build:           true,
+			Quality:         true,
+			Dependencies:    true,
+			Runtime:         true,
+			Docs:            true,
+			Tests:           true,
+			Benchmark:       true,
+			Secrets:         true,
+			Vulnerabilities: true,
 		}
 		coverage = true // default status run reports coverage
 	}
