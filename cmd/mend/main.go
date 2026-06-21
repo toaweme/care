@@ -82,7 +82,7 @@ func run(cwd string, args []string) error {
 	runner := mend.NewRunner(cfg.AutoInstall, cfg.Tools)
 	grading := rating.FromConfig(cfg.Health.Weights, cfg.Health.Caps)
 	statusCommand := NewStatusCommand(eco, runner, golang.ModulePath, cfg.CheckDisabled, resolveVC, grading)
-	helpCommand := builtinCommands.NewHelpCommand(app.Config, app.Commands, app.OutputFormats)
+	helpCommand := builtinCommands.NewHelpCommand(app.Config, app.Commands, app.OutputFormats, app.DefaultCommand)
 	app.Help(helpCommand)
 	app.Default(statusCommand)
 	app.Add("status", statusCommand)

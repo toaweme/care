@@ -81,7 +81,7 @@ func NewStatusCommand(eco *mend.Ecosystem, runner mend.Runner, module func(dir s
 
 // Help returns the status command's usage text.
 func (c *StatusCommand) Help() string {
-	return "Report status for the current repository: --git working-tree state, -q quality (build, lint, dependencies, runtime, docs), -t tests, -b benchmarks, -s security (secrets, vulnerabilities). Default: all, with coverage. --coverage forces coverage on a -t run; --fix applies fixes first. --output writes JSON to a file; --amend fast-merges that file's working-tree state (one-shot; loop it externally for live tracking)."
+	return "Report status for the current repository."
 }
 
 // Run executes the selected checks against the cwd and either renders the report or
