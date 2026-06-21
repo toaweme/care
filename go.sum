@@ -35,10 +35,14 @@ github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0t
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/toaweme/cli v0.2.0 h1:l3GQ+aT+K2waEzzF1pNiHyvSCvsDuGUdVuCBker06EU=
 github.com/toaweme/cli v0.2.0/go.mod h1:doD+PmWhrD8Y7RWG+9wyLzC1oWZodxMwAk3CwIkGbJ4=
+github.com/toaweme/cli v0.2.1 h1:0g1OAD5bqHD/lRJ1pay/cOvCiNcKOwv8pRH64rswlIw=
+github.com/toaweme/cli v0.2.1/go.mod h1:doD+PmWhrD8Y7RWG+9wyLzC1oWZodxMwAk3CwIkGbJ4=
 github.com/toaweme/cli/config/addons/yaml v0.2.0 h1:VxyaF/y3TzRwY+Ri4FabsbIZdwgk/6kLYM8Y6VAy+Aw=
 github.com/toaweme/cli/config/addons/yaml v0.2.0/go.mod h1:iQyQl11LxLOoCfWskHJXx1PjkXb5vDO3SD6pSDvlGnY=
 github.com/toaweme/http v0.1.0 h1:I7LK4YQ/dBzhwhMOtR7Uvt7+txbA9iReGbtzSyBBXoo=
 github.com/toaweme/http v0.1.0/go.mod h1:w0dJHiAjsJvaqGuA+ukLh+VvPBhzcy8WL9Hv8eij8Dk=
+github.com/toaweme/http v0.1.1 h1:rEbDrewJXOFjLRLZ3NReUfmUNkVgGNyZyE76ledwaWo=
+github.com/toaweme/http v0.1.1/go.mod h1:w0dJHiAjsJvaqGuA+ukLh+VvPBhzcy8WL9Hv8eij8Dk=
 github.com/toaweme/structs v0.2.0 h1:VbFna+mg1luCcmmL3QKxzK6YKzlYMXNIvqWaTqnnJU4=
 github.com/toaweme/structs v0.2.0/go.mod h1:baBPdZnvyXWdMgk0M1ksmMnGRE+ShMrh7RFc+Xv7r0Y=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavMF/ppJZNG9ZpyihvCd0w101no=

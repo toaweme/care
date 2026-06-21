@@ -1,6 +1,9 @@
 package output
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/toaweme/mend"
@@ -104,6 +107,125 @@ func buildJSON(outputs []mend.Rendered, info RunInfo, grading rating.Config) Rep
 	}
 	rep.Health = buildHealth(runs, info.DurationMs, grading)
 	return rep
+}
+
+// BuildReport shapes a run's outputs into the public JSON report. It is the exported
+// entry point for callers that write the report themselves (e.g. to a file) rather
+// than through Render.
+func BuildReport(outputs []mend.Rendered, info RunInfo, grading rating.Config) Report {
+	return buildJSON(outputs, info, grading)
+}
+
+// ReadReport reads and decodes a previously written JSON report from path.
+func ReadReport(path string) (Report, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Report{}, fmt.Errorf("failed to read report file: %w", err)
+	}
+	var rep Report
+	if err := json.Unmarshal(data, &rep); err != nil {
+		return Report{}, fmt.Errorf("failed to decode report file: %w", err)
+	}
+	return rep, nil
+}
+
+// WriteReportFile encodes rep as indented JSON to path, replacing any existing file.
+func WriteReportFile(path string, rep Report) error {
+	data, err := json.MarshalIndent(rep, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to encode report: %w", err)
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("failed to write report file: %w", err)
+	}
+	return nil
+}
+
+// AmendReport merges a fast incremental run's outputs into an existing report: it
+// refreshes the caller-resolved header (created stamp, version_control), replaces
+// each re-run check in place (matched by feature+profile, appended when new), and
+// re-grades health from the merged check set. The promoted metrics, run duration and
+// slowest check from the last full run are preserved, since a fast pass does not
+// recompute them. The install-phase tools are left untouched.
+func AmendReport(existing Report, outputs []mend.Rendered, info RunInfo, grading rating.Config) Report {
+	rep := existing
+	if !info.Created.IsZero() {
+		rep.Created = info.Created.Format(time.RFC3339)
+	}
+	if info.Repo != "" {
+		rep.Dir = info.Repo
+	}
+	if info.Module != "" {
+		rep.Module = info.Module
+	}
+	rep.VersionControl = info.VC
+
+	for _, o := range outputs {
+		if o.Phase() == mend.PhaseInstall {
+			continue
+		}
+		c := checkOf(o)
+		if i := indexOfCheck(rep.Checks, c.Feature, c.Profile); i >= 0 {
+			rep.Checks[i] = c
+		} else {
+			rep.Checks = append(rep.Checks, c)
+		}
+	}
+
+	rep.Health = regrade(rep.Health, rep.Checks, grading)
+	return rep
+}
+
+// indexOfCheck returns the index of the check matching feature+profile, or -1.
+func indexOfCheck(checks []Check, feature, profile string) int {
+	for i, c := range checks {
+		if c.Feature == feature && c.Profile == profile {
+			return i
+		}
+	}
+	return -1
+}
+
+// regrade recomputes the status tally and the rating-engine grade from a merged set
+// of wire checks, preserving the metrics/duration/slowest carried on prev (a fast
+// pass does not recompute those). Each check's outcome is re-derived from its status
+// string, the inverse of Status.String().
+func regrade(prev Health, checks []Check, grading rating.Config) Health {
+	h := prev
+	h.OK, h.Warn, h.Fail, h.Skip = 0, 0, 0, 0
+	rc := make([]rating.Check, 0, len(checks))
+	for _, c := range checks {
+		o := outcomeOf(c.Status)
+		switch o {
+		case rating.Pass:
+			h.OK++
+		case rating.Warn:
+			h.Warn++
+		case rating.Fail:
+			h.Fail++
+		case rating.Skip:
+			h.Skip++
+		}
+		rc = append(rc, rating.Check{Feature: c.Feature, Outcome: o})
+	}
+	grade := rating.Evaluate(rc, grading)
+	h.Score, h.Rating, h.Verdict = grade.Score, grade.Rating, grade.Verdict
+	return h
+}
+
+// outcomeOf maps a wire status string back onto the rating engine's Outcome, the
+// inverse of mend.Status.String().
+func outcomeOf(status string) rating.Outcome {
+	switch status {
+	case mend.StatusOK.String():
+		return rating.Pass
+	case mend.StatusWarn.String():
+		return rating.Warn
+	case mend.StatusFail.String():
+		return rating.Fail
+	default:
+		return rating.Skip
+	}
 }
 
 func checkOf(o mend.Rendered) Check {
