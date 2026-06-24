@@ -30,7 +30,7 @@ github.com/toaweme/mend  │  C 78/100 needs-attention  │  7 passed, 2 failed,
 ✓ vulnerabilities  0 vulnerabilities (+12 in go toolchain)
 ○ benchmarks       skipped: not applicable
 ✗ lint             1 issue
-  cmd/mend/output/report_json.go  138:12  G306: Expect WriteFile permissions to be 0600 or less (gosec)
+  cmd/mend/output/report_json.go:138:12  G306: Expect WriteFile permissions to be 0600 or less (gosec)
 ✗ version control  1 uncommitted (+235 -0)
   untracked  README.md  +235 -0  3m ago
 ```
