@@ -131,7 +131,7 @@ func (r QualityReport) Summary(int) string {
 }
 
 // Rows lists each issue as location/message, where location is a contiguous
-// file:line:col so terminals and editors recognise it as a jump target.
+// file:line:col so terminals and editors recognize it as a jump target.
 func (r QualityReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Issues))
 	for _, is := range r.Issues {

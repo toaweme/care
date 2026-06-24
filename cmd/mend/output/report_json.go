@@ -135,7 +135,7 @@ func WriteReportFile(path string, rep Report) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode report: %w", err)
 	}
-	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil { //nolint:gosec // the report is polled/served by external live-tracking tooling (possibly a different user) and carries no secrets
 		return fmt.Errorf("failed to write report file: %w", err)
 	}
 	return nil

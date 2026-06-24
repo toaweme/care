@@ -29,4 +29,4 @@ jobs:
           go-version: stable
           check-latest: true
       - run: go install github.com/toaweme/mend/cmd/mend@latest
-      - run: mend -q -t -r -s
+      - run: mend -q -t -ra -se

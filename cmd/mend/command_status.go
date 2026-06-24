@@ -18,29 +18,43 @@ import (
 // are already rendered, so main exits non-zero without logging it as an app error.
 var errChecksFailed = errors.New("check(s) failed")
 
-// StatusFlags selects which checks a status run includes.
+// StatusFlags selects which checks a status run includes. There is one flag per
+// feature shown in the report, named after that feature, plus the --quality and
+// --security convenience umbrellas that flip on a whole family at once. Passing no
+// feature flag runs everything.
 type StatusFlags struct {
-	Git      bool `arg:"git" short:"gi" env:"MEND_STATUS_GIT" default:"false" help:"Report git working-tree and upstream-sync state"`
-	Quality  bool `arg:"quality" short:"q" env:"MEND_STATUS_QUALITY" default:"false" help:"Run quality checks (lint, config sync, go.mod)"`
-	Tests    bool `arg:"tests" short:"t" env:"MEND_STATUS_TESTS" default:"false" help:"Run tests"`
+	VersionControl  bool `arg:"version-control" short:"vc" env:"MEND_STATUS_VERSION_CONTROL" default:"false" help:"Report git working-tree and upstream-sync state"`
+	Build           bool `arg:"build" short:"b" env:"MEND_STATUS_BUILD" default:"false" help:"Check that the module compiles"`
+	Lint            bool `arg:"lint" short:"l" env:"MEND_STATUS_LINT" default:"false" help:"Run the linter (golangci-lint, or go vet + gofmt fallback)"`
+	Dependencies    bool `arg:"dependencies" short:"d" env:"MEND_STATUS_DEPENDENCIES" default:"false" help:"Check dependencies are tidy with no replace directives"`
+	Runtime         bool `arg:"runtime" short:"r" env:"MEND_STATUS_RUNTIME" default:"false" help:"Check declared vs code vs dependency runtime versions"`
+	Docs            bool `arg:"docs" short:"dc" env:"MEND_STATUS_DOCS" default:"false" help:"Check documentation coverage"`
+	Tests           bool `arg:"tests" short:"t" env:"MEND_STATUS_TESTS" default:"false" help:"Run tests"`
+	Benchmarks      bool `arg:"benchmarks" short:"bn" env:"MEND_STATUS_BENCHMARKS" default:"false" help:"Run benchmarks (go test -bench)"`
+	Secrets         bool `arg:"secrets" short:"s" env:"MEND_STATUS_SECRETS" default:"false" help:"Scan for committed secrets"`
+	Vulnerabilities bool `arg:"vulnerabilities" short:"vu" env:"MEND_STATUS_VULNERABILITIES" default:"false" help:"Scan dependencies for known vulnerabilities"`
+
+	// Quality and Security are convenience umbrellas over their feature families;
+	// each is equivalent to passing every per-feature flag it covers.
+	Quality  bool `arg:"quality" short:"q" env:"MEND_STATUS_QUALITY" default:"false" help:"Umbrella for build, lint, dependencies, runtime and docs"`
+	Security bool `arg:"security" short:"se" env:"MEND_STATUS_SECURITY" default:"false" help:"Umbrella for secrets and vulnerabilities"`
+
 	Coverage bool `arg:"coverage" short:"c" env:"MEND_STATUS_COVERAGE" default:"false" help:"Collect coverage when running tests (implies --tests)"`
-	Race     bool `arg:"race" short:"r" env:"MEND_STATUS_RACE" default:"false" help:"Run tests with -race"`
-	Bench    bool `arg:"bench" short:"b" env:"MEND_STATUS_BENCH" default:"false" help:"Run benchmarks (go test -bench)"`
-	Security bool `arg:"security" short:"s" env:"MEND_STATUS_SECURITY" default:"false" help:"Run security checks (secrets, vulnerabilities)"`
+	Race     bool `arg:"race" short:"ra" env:"MEND_STATUS_RACE" default:"false" help:"Run tests with -race"`
 	Fix      bool `arg:"fix" env:"MEND_STATUS_FIX" default:"false" help:"Apply auto-fixes before checking"`
 	// Amend is a fast, one-shot update for external live-tracking tooling to loop: a
 	// single call re-runs only the working-tree (version-control) state and amends it
 	// into the --output JSON file, re-grading from the preserved heavy-check results,
 	// then exits. With no file yet it falls through to a full run that seeds it. mend
 	// never loops itself; the caller (a watcher/cron/dashboard) repeats the call.
-	Amend bool `arg:"amend" short:"a" env:"MEND_STATUS_AMEND" default:"false" help:"Fast one-shot amend: re-run only working-tree state and merge it into the --output file, then exit (full seeding run when the file is absent). Loop it from external tooling for live tracking"`
+	Amend bool `arg:"amend" short:"a" env:"MEND_STATUS_AMEND" default:"false" help:"Amend the json report file with -vc information. Used with --json and --output."`
 }
 
 // OutputFlags holds the flags that shape how a run's results are rendered.
 type OutputFlags struct {
 	JSON          bool   `arg:"json" short:"j" env:"MEND_JSON" default:"false" help:"Output results as JSON"`
 	ExpandInstall bool   `arg:"expand-install" short:"ei" env:"MEND_EXPAND_INSTALL" default:"false" help:"Expand the per-tool install phase into its own section instead of folding it into the repo header"`
-	Output        string `arg:"output" short:"o" env:"MEND_OUTPUT" help:"Write the JSON report to a file instead of stdout (the file --amend updates)"`
+	Output        string `arg:"output" short:"o" env:"MEND_OUTPUT" help:"Write the JSON report to a file instead of stdout."`
 }
 
 // StatusConfig is the full flag set for a status run: which checks to run, how to
@@ -165,25 +179,24 @@ func fileExists(path string) bool {
 
 // mapEcosystemConfigs maps the status flags onto the EcosystemConfig and the per-run
 // RunOptions, defaulting to everything (with coverage) when no feature flag is set.
-// The quality umbrella covers build, lint, dependencies, runtime and docs; the
-// security umbrella covers secrets and vulnerabilities.
+// Each feature has its own flag; the --quality umbrella additionally turns on build,
+// lint, dependencies, runtime and docs, and --security turns on secrets and
+// vulnerabilities.
 func mapEcosystemConfigs(in StatusFlags) (mend.EcosystemConfig, mend.RunOptions) {
-	// the quality umbrella covers the compile/style/dependency family: build, lint
-	// (golangci-lint, or the go vet + gofmt fallback), dependencies, runtime, docs.
 	cfg := mend.EcosystemConfig{
-		VersionControl:  in.Git,
-		Build:           in.Quality,
-		Quality:         in.Quality,
-		Dependencies:    in.Quality,
-		Runtime:         in.Quality,
-		Docs:            in.Quality,
+		VersionControl:  in.VersionControl,
+		Build:           in.Build || in.Quality,
+		Quality:         in.Lint || in.Quality,
+		Dependencies:    in.Dependencies || in.Quality,
+		Runtime:         in.Runtime || in.Quality,
+		Docs:            in.Docs || in.Quality,
 		Tests:           in.Tests || in.Coverage,
-		Benchmark:       in.Bench,
-		Secrets:         in.Security,
-		Vulnerabilities: in.Security,
+		Benchmark:       in.Benchmarks,
+		Secrets:         in.Secrets || in.Security,
+		Vulnerabilities: in.Vulnerabilities || in.Security,
 	}
 	coverage := in.Coverage
-	allOff := !in.Git && !in.Quality && !in.Tests && !in.Coverage && !in.Security && !in.Bench
+	allOff := cfg == (mend.EcosystemConfig{})
 	if allOff {
 		cfg = mend.EcosystemConfig{
 			VersionControl:  true,
