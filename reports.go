@@ -130,32 +130,28 @@ func (r QualityReport) Summary(int) string {
 	return plural(len(r.Issues), "issue", "issues")
 }
 
-// Rows lists each issue as file/location/message, blanking the file cell on runs of
-// the same file so it reads grouped without leaving the flat grid.
+// Rows lists each issue as location/message, where location is a contiguous
+// file:line:col so terminals and editors recognise it as a jump target.
 func (r QualityReport) Rows(int) [][]string {
 	rows := make([][]string, 0, len(r.Issues))
-	var lastFile string
 	for _, is := range r.Issues {
-		file := is.File
-		if file == lastFile {
-			file = ""
-		} else {
-			lastFile = is.File
-		}
 		msg := is.Message
 		if is.Linter != "" {
 			msg += " (" + is.Linter + ")"
 		}
-		rows = append(rows, []string{file, issueLoc(is), msg})
+		rows = append(rows, []string{issueLoc(is), msg})
 	}
 	return rows
 }
 
 func issueLoc(is QualityIssue) string {
-	if is.Line > 0 {
-		return fmt.Sprintf("%d:%d", is.Line, is.Col)
+	if is.Line > 0 && is.Col > 0 {
+		return fmt.Sprintf("%s:%d:%d", is.File, is.Line, is.Col)
 	}
-	return "-"
+	if is.Line > 0 {
+		return fmt.Sprintf("%s:%d", is.File, is.Line)
+	}
+	return is.File
 }
 
 // DepsReport is the dependency-graph state for one repo: hygiene findings (module
