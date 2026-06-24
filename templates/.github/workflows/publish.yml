@@ -1,0 +1,61 @@
+# Generate this repo's mend health report and publish it to a codeviewer instance.
+#
+# No secrets: the report is uploaded with a short-lived GitHub OIDC token that proves
+# which repo it came from. The token's audience must equal the ingest server's
+# CV_INGEST_AUDIENCE, and the repo (or its owner) must be on CV_INGEST_ALLOW. The
+# server reads the repo's visibility from the verified OIDC claim, so a private repo
+# is served only on the private (VPN) view; nothing in this workflow changes per repo.
+#
+# Install with mend:
+#   mend get --from builtin:.github/workflows/publish.yml --out .github/workflows/codeviewer.yml
+#
+# Set the aggregator URL once as a repo/org variable (Settings -> Variables):
+#   CODEVIEWER_URL = https://code.toawe.me   (the default below is used if unset)
+
+name: codeviewer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # mint the OIDC token; the only permission that matters here
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      AGGREGATOR: ${{ vars.CODEVIEWER_URL || 'https://code.toawe.me' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Install mend
+        run: go install github.com/toaweme/mend/cmd/mend@latest
+
+      # mend exits non-zero when it finds issues but still writes a valid report, so
+      # do not let its exit code fail the job; the upload step guards on the file.
+      - name: Generate mend report
+        run: mend status --json --output report.mend.json || true
+
+      - name: Publish to codeviewer
+        run: |
+          set -euo pipefail
+          [ -s report.mend.json ] || { echo "no report produced; nothing to publish"; exit 0; }
+          token="$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AGGREGATOR" | jq -r .value)"
+          curl -fsS -X POST "$AGGREGATOR/ingest?kind=mend" \
+            -H "Authorization: Bearer $token" \
+            --data-binary @report.mend.json
+          echo "published mend report to $AGGREGATOR"
