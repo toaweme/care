@@ -68,8 +68,14 @@ func (s SyncStatus) InSync() bool {
 // zero CommittedAt means it could not be read (e.g. an empty repo); a zero TouchedAt
 // means the tree is clean (no uncommitted file to date).
 type Info struct {
-	Branch      string
-	Commit      string
+	Branch string
+	// Tag is the tag pointing at HEAD, empty when HEAD is not tagged. On a tagged CI
+	// build the runner checks out a detached HEAD at the tag, so this is the reliable
+	// release identity there (Branch comes back empty in that state).
+	Tag    string
+	Commit string
+	// CommitFull is the full 40-char HEAD SHA; Commit is its short form.
+	CommitFull  string
 	Commits     int
 	Dirty       bool
 	HasUpstream bool

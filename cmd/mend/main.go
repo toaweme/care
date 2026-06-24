@@ -105,12 +105,20 @@ func run(cwd string, args []string) error {
 // report still renders, just without the VC line.
 func resolveVC(dir string) *output.VCInfo {
 	info, err := git.NewRepository(dir).Info()
-	if err != nil || info.Branch == "" {
+	if err != nil {
+		return nil
+	}
+	branch, tag := ciRef(info.Branch, info.Tag)
+	// a tagged CI build checks out a detached HEAD, so branch is empty; a tag (or a
+	// commit) is still enough identity to emit the header.
+	if branch == "" && tag == "" && info.Commit == "" {
 		return nil
 	}
 	vc := &output.VCInfo{
-		Branch:       info.Branch,
+		Branch:       branch,
+		Tag:          tag,
 		Commit:       info.Commit,
+		CommitFull:   info.CommitFull,
 		Commits:      info.Commits,
 		Dirty:        info.Dirty,
 		HasUpstream:  info.HasUpstream,
@@ -128,6 +136,30 @@ func resolveVC(dir string) *output.VCInfo {
 		vc.TouchedAt = &t
 	}
 	return vc
+}
+
+// ciRef fills branch and tag from the CI runner's environment when git cannot
+// supply them, which is the normal case for a tagged release: the runner checks out
+// a detached HEAD, so git reports no branch, but the env names the ref. GitHub
+// Actions sets GITHUB_REF_TYPE + GITHUB_REF_NAME; GitLab sets CI_COMMIT_TAG and
+// CI_COMMIT_REF_NAME. Git-derived values win when present, so local runs are
+// unaffected.
+func ciRef(branch, tag string) (string, string) {
+	if tag == "" {
+		if t := os.Getenv("CI_COMMIT_TAG"); t != "" {
+			tag = t
+		} else if os.Getenv("GITHUB_REF_TYPE") == "tag" {
+			tag = os.Getenv("GITHUB_REF_NAME")
+		}
+	}
+	if branch == "" {
+		if os.Getenv("GITHUB_REF_TYPE") == "branch" {
+			branch = os.Getenv("GITHUB_REF_NAME")
+		} else if b := os.Getenv("CI_COMMIT_BRANCH"); b != "" {
+			branch = b
+		}
+	}
+	return branch, tag
 }
 
 func boolOption(cfg mend.Config, check, option string) bool {

@@ -28,9 +28,14 @@ type RunInfo struct {
 // touched. TouchedAt is the newest uncommitted-file mtime, the repo-level "last
 // worked on" signal; it is absent when the tree is clean.
 type VCInfo struct {
-	Branch      string     `json:"branch,omitempty"`
-	Commit      string     `json:"commit,omitempty"`
-	Commits     int        `json:"commits,omitempty"`
+	Branch string `json:"branch,omitempty"`
+	// Tag is the release tag at HEAD, absent when HEAD is not tagged. It is the
+	// release identity for a tagged CI build, where Branch is unavailable.
+	Tag    string `json:"tag,omitempty"`
+	Commit string `json:"commit,omitempty"`
+	// CommitFull is the full 40-char HEAD SHA; Commit is its short form.
+	CommitFull string `json:"commit_full,omitempty"`
+	Commits    int    `json:"commits,omitempty"`
 	Dirty       bool       `json:"dirty"`
 	HasUpstream bool       `json:"has_upstream"`
 	Ahead       int        `json:"ahead,omitempty"`

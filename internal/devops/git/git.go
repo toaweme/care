@@ -247,11 +247,21 @@ func (p *Repo) Info() (Info, error) {
 	var info Info
 	// each field is best-effort: a fresh repo with no commits has no HEAD, so a
 	// failing probe leaves its field zero rather than failing the whole header.
-	if branch, err := gitLine(p.Dir, "rev-parse", "--abbrev-ref", "HEAD"); err == nil {
+	if branch, err := gitLine(p.Dir, "rev-parse", "--abbrev-ref", "HEAD"); err == nil && branch != "HEAD" {
+		// a detached HEAD (tagged CI checkout, rebase, bisect) reports the literal
+		// "HEAD"; treat that as no branch so a caller can fill it from CI instead.
 		info.Branch = branch
+	}
+	if tag, err := gitLine(p.Dir, "tag", "--points-at", "HEAD"); err == nil && tag != "" {
+		// multiple tags on one commit come back newline-separated; the first is enough
+		// to identify the release.
+		info.Tag = strings.SplitN(tag, "\n", 2)[0]
 	}
 	if commit, err := gitLine(p.Dir, "rev-parse", "--short", "HEAD"); err == nil {
 		info.Commit = commit
+	}
+	if commit, err := gitLine(p.Dir, "rev-parse", "HEAD"); err == nil {
+		info.CommitFull = commit
 	}
 	if count, err := gitLine(p.Dir, "rev-list", "--count", "HEAD"); err == nil {
 		// a malformed count just leaves Commits zero; not worth failing the header
