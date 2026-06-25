@@ -2,7 +2,13 @@ name: Release
 
 on:
   push:
-    tags: [ "v*" ]
+    tags:
+      - "v*"
+      # v0.0.0 is a synthetic base tag at the root commit: it exists only so the
+      # first real release (v0.1.0) has a prior tag to diff, letting goreleaser's
+      # github changelog resolve @usernames instead of falling back to git log
+      # (name+email). It must never trigger a release of its own.
+      - "!v0.0.0"
 
 permissions:
   contents: write   # create the GitHub release and upload assets
