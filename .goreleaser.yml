@@ -1,0 +1,101 @@
+version: 2
+
+project_name: mend
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: mend
+    main: ./cmd/mend
+    binary: mend
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # reproducible builds: pin the binary's build time to the commit time.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - ids: [mend]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x64
+      {{- else if eq .Arch "386" }}x32
+      {{- else }}{{ .Arch }}{{ end }}
+
+checksum:
+  name_template: "checksums.txt"
+
+# keyless cosign signing of the checksums file. Verifying checksums.txt
+# transitively verifies every archive listed in it, so one signature covers
+# the whole release. Needs cosign in CI and an OIDC token (id-token: write).
+signs:
+  - id: checksum
+    cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
+brews:
+  - name: mend
+    homepage: "https://github.com/toaweme/mend"
+    description: "Repository health and quality checker"
+    license: "MIT"
+    # one shared tap holds a Formula/<project>.rb per project, so every
+    # toaweme tool installs as `brew install toaweme/tap/<project>`.
+    repository:
+      owner: toaweme
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    # don't push a formula for pre-release tags (e.g. v1.0.0-rc1).
+    skip_upload: auto
+    test: |
+      system "#{bin}/mend", "--help"
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge branch
+
+release:
+  # mark vX.Y.Z-rc / -beta / -alpha tags as GitHub pre-releases automatically.
+  prerelease: auto

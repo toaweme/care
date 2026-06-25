@@ -133,11 +133,17 @@ yours to retune.
 > With [Go Report Card](https://goreportcard.com) winding down, coincidentally mend works as a local alternative that runs on your
 > own machine.
 
+## Hosted code and health reports
+
+Mend's --json output can be ingested by any 3rd party tooling including our <a href="https://code.toawe.me">code viewer</a>, which also hosts our badges and cards.
+
+Public availability soon.
+
+<p align="center">
+  <a href="https://code.toawe.me/toaweme/mend/health"><picture><source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/card.svg"><source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/card-light.svg"><img alt="mend health" src="https://code.toawe.me/toaweme/mend/card-light.svg" width="48%"></picture></a>
+  <a href="https://code.toawe.me/toaweme/mend/code"><picture><source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/code-card.svg"><source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/code-card-light.svg"><img alt="mend code" src="https://code.toawe.me/toaweme/mend/code-card-light.svg" width="48%"></picture></a>
+</p>
+
 ---
 
-<table border="0">
-  <tr>
-    <td><a href="https://code.toawe.me/toaweme/mend/health"><picture><source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/card.svg"><source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/card-light.svg"><img alt="mend health" src="https://code.toawe.me/toaweme/mend/card-light.svg" width="440"></picture></a></td>
-    <td><a href="https://code.toawe.me/toaweme/mend/code"><picture><source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/code-card.svg"><source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/code-card-light.svg"><img alt="mend code" src="https://code.toawe.me/toaweme/mend/code-card-light.svg" width="440"></picture></a></td>
-  </tr>
-</table>
+Made with ❤️ in Lithuania 🇱🇹.
