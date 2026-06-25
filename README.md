@@ -1,6 +1,13 @@
 # mend
 
 [![Quality](https://github.com/toaweme/mend/actions/workflows/tests.yml/badge.svg)](https://github.com/toaweme/mend/actions/workflows/tests.yml)
+<a href="https://code.toawe.me/toaweme/mend/health">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/badge-dark.svg">
+        <source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/badge.svg">
+        <img alt="mend health" src="https://code.toawe.me/toaweme/mend/badge.svg">
+    </picture>
+</a>
 [![GitHub Tag](https://img.shields.io/github/v/tag/toaweme/mend?label=Tag&color=green)](https://github.com/toaweme/mend/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue)](/LICENSE)
 
@@ -125,3 +132,12 @@ yours to retune.
 
 > With [Go Report Card](https://goreportcard.com) winding down, coincidentally mend works as a local alternative that runs on your
 > own machine.
+
+---
+
+<table border="0">
+  <tr>
+    <td><a href="https://code.toawe.me/toaweme/mend/health"><picture><source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/card.svg"><source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/card-light.svg"><img alt="mend health" src="https://code.toawe.me/toaweme/mend/card-light.svg" width="440"></picture></a></td>
+    <td><a href="https://code.toawe.me/toaweme/mend/code"><picture><source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/code-card.svg"><source media="(prefers-color-scheme: light)" srcset="https://code.toawe.me/toaweme/mend/code-card-light.svg"><img alt="mend code" src="https://code.toawe.me/toaweme/mend/code-card-light.svg" width="440"></picture></a></td>
+  </tr>
+</table>
