@@ -60,6 +60,7 @@ signs:
 
 brews:
   - name: mend
+    directory: Formula
     homepage: "https://github.com/toaweme/mend"
     description: "Repository health and quality checker"
     license: "MIT"

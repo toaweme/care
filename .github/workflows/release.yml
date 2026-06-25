@@ -28,7 +28,7 @@ jobs:
       # v7.2.2 (https://github.com/goreleaser/goreleaser-action/releases/tag/v7.2.2)
       - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89
         with:
-          version: latest
+          version: "~> v2"   # lock to the GoReleaser v2 line; v3 won't silently break the run
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
