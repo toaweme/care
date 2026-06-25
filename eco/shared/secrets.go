@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/toaweme/mend"
+	"github.com/toaweme/mend/internal/devops/git"
 )
 
 type secrets struct {
@@ -56,7 +57,36 @@ func (f *secrets) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.O
 	if len(findings) == 0 {
 		return mend.Errored[mend.SecretReport]("tool failed", fmt.Errorf("failed to run betterleaks: %w", err))
 	}
+	// a gitignored file (e.g. a local .env) is the correct home for secrets, not a
+	// leak, so drop working-tree findings in ignored files. History scans keep
+	// everything: a secret committed in the past is a real exposure even if the
+	// file is gitignored at HEAD.
+	if !f.history {
+		findings = dropIgnored(dir, findings)
+		if len(findings) == 0 {
+			return mend.Pass(mend.SecretReport{})
+		}
+	}
 	return mend.Fail(mend.SecretReport{Findings: findings})
+}
+
+// dropIgnored removes findings whose file git ignores in dir.
+func dropIgnored(dir string, findings []mend.SecretFinding) []mend.SecretFinding {
+	files := make([]string, 0, len(findings))
+	for _, fnd := range findings {
+		files = append(files, fnd.File)
+	}
+	ignored := git.IgnoredFiles(dir, files)
+	if len(ignored) == 0 {
+		return findings
+	}
+	kept := make([]mend.SecretFinding, 0, len(findings))
+	for _, fnd := range findings {
+		if !ignored[fnd.File] {
+			kept = append(kept, fnd)
+		}
+	}
+	return kept
 }
 
 // parseBetterleaksJSON reads betterleaks' JSON report file into structured

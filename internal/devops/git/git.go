@@ -232,6 +232,32 @@ func gitLine(repoDir string, args ...string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
+// IgnoredFiles returns the subset of paths that git ignores in repoDir, as a
+// set keyed by the path exactly as passed. It lets callers drop working-tree
+// findings in intentionally gitignored files (e.g. a local .env), which are not
+// leaks. `git check-ignore` exits 1 when no path matches, which is not an error,
+// so any failure just yields an empty set and nothing is filtered.
+func IgnoredFiles(repoDir string, paths []string) map[string]bool {
+	ignored := make(map[string]bool, len(paths))
+	if len(paths) == 0 {
+		return ignored
+	}
+	var out bytes.Buffer
+	// the binary is the constant "git" and `--` separates flags from the path
+	// operands, so the variadic paths cannot inject options or another command.
+	//nolint:gosec // G204: fixed "git" binary, paths are operands after `--`
+	cmd := exec.Command("git", append([]string{"check-ignore", "--"}, paths...)...)
+	cmd.Dir = filepath.Clean(repoDir)
+	cmd.Stdout = &out
+	_ = cmd.Run()
+	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+		if line != "" {
+			ignored[line] = true
+		}
+	}
+	return ignored
+}
+
 // Info returns the repository's identity header (branch, commit, commit count,
 // dirty and sync state, commit time, and working-tree touched time), best-effort
 // per field.
