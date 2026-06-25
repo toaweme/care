@@ -108,3 +108,18 @@ changelog:
 release:
   # mark vX.Y.Z-rc / -beta / -alpha tags as GitHub pre-releases automatically.
   prerelease: auto
+  # appended under the auto-generated commit changelog. Kept deliberately small
+  # so it stays useful even on releases that carry only a commit or two.
+  footer: |
+    ## Install
+
+    ```sh
+    # go
+    go install github.com/toaweme/mend/cmd/mend@{{ .Tag }}
+
+    # homebrew
+    brew install toaweme/tap/mend
+
+    # binary (linux x64; swap os/arch as needed)
+    wget -qO- https://github.com/toaweme/mend/releases/download/{{ .Tag }}/mend_{{ .Version }}_linux_x64.tar.gz | tar xz
+    ```

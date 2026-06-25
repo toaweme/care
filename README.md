@@ -47,8 +47,19 @@ One command, every check, one grade. Run it before you push, in CI, or on a time
 ## Install
 
 ```sh
+# go
 go install github.com/toaweme/mend/cmd/mend@latest
+
+# homebrew
+brew install toaweme/tap/mend
+
+# binary (linux x64; swap version/os/arch as needed)
+# replace 
+wget -qO- https://github.com/toaweme/mend/releases/download/v{v}/mend_{v}_linux_x64.tar.gz | tar xz
 ```
+
+Every release also lists the exact archive for each OS/arch on the
+[releases page](https://github.com/toaweme/mend/releases).
 
 `mend` shells out to a handful of tools (`golangci-lint`, `govulncheck`, `betterleaks`, plus `go`/`gofmt` from your
 toolchain). With `auto_install: true` (the default) it provisions any missing binary the moment a check needs it, via
@@ -64,6 +75,7 @@ Run the selected checks against the current repo and render the result.
 
 - `--json`/`-j` emits the report as JSON to stdout
 - `--output`/`-o <file>` writes the JSON report to a file instead.
+- `--pretty`/`-p` outputs to stdout. Useful in CI where we need both JSON file and the logs.
 - `--amend`/`-a` is a fast one-shot refresh of just the working-tree state, merged into the `--output` file
   (~36x faster than a full `mend status` run) for an external watcher, cron, or dashboard to poll. 
 
