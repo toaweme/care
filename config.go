@@ -72,6 +72,12 @@ func (c Config) CheckDisabled(feature string) bool {
 	return c.Checks[feature].Disabled
 }
 
+// ToolVersion returns the operator-pinned version for a named tool, or "" when the
+// tool is not configured (which the constructors read as "no pin, use the default").
+func (c Config) ToolVersion(name string) string {
+	return c.Tools[name].Version
+}
+
 // ToolConfig is the operator-facing override for a tool binary: a version pin
 // and an enable/disable switch. It deliberately carries no install coordinates.
 type ToolConfig struct {

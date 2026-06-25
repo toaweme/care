@@ -34,8 +34,8 @@ type VCInfo struct {
 	Tag    string `json:"tag,omitempty"`
 	Commit string `json:"commit,omitempty"`
 	// CommitFull is the full 40-char HEAD SHA; Commit is its short form.
-	CommitFull string `json:"commit_full,omitempty"`
-	Commits    int    `json:"commits,omitempty"`
+	CommitFull  string     `json:"commit_full,omitempty"`
+	Commits     int        `json:"commits,omitempty"`
 	Dirty       bool       `json:"dirty"`
 	HasUpstream bool       `json:"has_upstream"`
 	Ahead       int        `json:"ahead,omitempty"`

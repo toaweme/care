@@ -11,5 +11,5 @@ import "embed"
 
 // FS is the embedded filesystem of canonical toaweme config and workflow templates.
 //
-//go:embed .golangci.yml .goreleaser.yml gitignore taskfile.library.yml taskfile.binary.yml taskfile.run.go.yml taskfile.test.go.yml .github/workflows licenses
+//go:embed .golangci.yml gitignore .github/workflows licenses
 var FS embed.FS

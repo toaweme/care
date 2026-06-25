@@ -24,6 +24,8 @@ import (
 	"github.com/toaweme/mend/templates"
 )
 
+var version = "0.0.0"
+
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -55,13 +57,13 @@ func run(cwd string, args []string) error {
 		// optional: a missing config store layers nothing and is not an error.
 		_ = store.Read(&cfg)
 	}
-	app := cli.NewApp(cli.Config{Name: "mend", Version: "1.0.0"}, cli.GlobalFlags{Cwd: cwd})
+	app := cli.NewApp(cli.Config{Name: "mend", Version: version}, cli.GlobalFlags{Cwd: cwd})
 
 	// build the tools at the top (with any operator version pin), then inject them
 	// into the features that fill the ecosystem's feature slots.
-	golangci := gotools.NewGolangCiLint(cfg.Tools["golangci-lint"].Version)
-	betterleaks := sharedtools.NewBetterleaks(cfg.Tools["betterleaks"].Version)
-	govulncheck := gotools.NewGovulncheck(cfg.Tools["govulncheck"].Version)
+	golangci := gotools.NewGolangCiLint(cfg.ToolVersion("golangci-lint"))
+	betterleaks := sharedtools.NewBetterleaks(cfg.ToolVersion("betterleaks"))
+	govulncheck := gotools.NewGovulncheck(cfg.ToolVersion("govulncheck"))
 	gotool := gotools.Go()
 	gofmt := gotools.Gofmt()
 
