@@ -2,14 +2,41 @@ name: Release
 
 on:
   push:
-    tags: [ "v*" ]
+    tags: ["v*"]
 
 permissions:
   contents: write   # create the GitHub release and upload assets
   id-token: write   # mint the OIDC token cosign uses for keyless signing
 
+env:
+  # tracks the version the shipped .golangci.yml is validated against.
+  GOLANGCI_VERSION: v2.12.2
+
 jobs:
+  # gate the release on correctness: a tag only ships if build, vet, tests, and
+  # lint pass on the tagged commit, independent of mend's own check logic.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./... -race
+
+      - name: golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_VERSION}
+          golangci-lint run
+
   goreleaser:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
@@ -20,7 +47,7 @@ jobs:
       # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
         with:
-          go-version: stable
+          go-version-file: go.mod   # same toolchain the gate tested with
 
       # v4.1.2 (https://github.com/sigstore/cosign-installer/releases/tag/v4.1.2)
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6

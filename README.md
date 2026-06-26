@@ -1,6 +1,6 @@
 # mend
 
-[![Quality](https://github.com/toaweme/mend/actions/workflows/tests.yml/badge.svg)](https://github.com/toaweme/mend/actions/workflows/tests.yml)
+[![Quality](https://github.com/toaweme/mend/actions/workflows/quality.yml/badge.svg)](https://github.com/toaweme/mend/actions/workflows/quality.yml)
 <a href="https://code.toawe.me/toaweme/mend/health">
     <picture>
         <source media="(prefers-color-scheme: dark)" srcset="https://code.toawe.me/toaweme/mend/badge-dark.svg">
@@ -60,6 +60,82 @@ wget -qO- https://github.com/toaweme/mend/releases/download/v{v}/mend_{v}_linux_
 
 Every release also lists the exact archive for each OS/arch on the
 [releases page](https://github.com/toaweme/mend/releases).
+
+### GitHub Actions
+
+Use the bundled action to install and run `mend` in another repo's CI. Pin it to
+an exact tag: the tag is the single source of truth, so it installs the matching
+`mend` binary and verifies its cosign signature and SHA-256 before running.
+
+With no inputs the action just installs a verified `mend` onto `PATH` for later
+steps - nothing is required. Pass `args` to run it directly. The value is split on
+spaces, so multiple arguments work (`args: get lint --force`):
+
+```yaml
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<sha>
+      - uses: toaweme/mend@v0.1.0   # installs mend v0.1.0
+        with:
+          args: status             # runs `mend status`, fails the job if a check fails
+```
+
+The full form writes a JSON report, fails the job on failing checks while still
+keeping the report as a downloadable artifact, and publishes it to an endpoint.
+Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
+origin as audience). `publish-url` is a full URL that defaults to mend's hosted
+dashboard. Override it for your own engine, or set it empty to skip publishing.
+Set `strict: false` (or omit it) to keep the job non-gating:
+
+```yaml
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write              # only for publishing
+    steps:
+      - uses: actions/checkout@<sha>
+      - uses: toaweme/mend@v0.1.0
+        with:
+          strict: true                                  # fail the job, but keep the report
+          output: report.mend.json                      # write the JSON report (<name>.mend.json)
+          upload: true                                  # upload it as an artifact (named report.mend.json)
+          publish-url: https://ci.example.com/mend      # full URL; omit to use the default mend dashboard
+```
+
+Inputs (none are required):
+
+| Input | Purpose | Default |
+| --- | --- | --- |
+| `version` | Override the binary version, only when pinning the action to a SHA or branch | Latest |
+| `args` | Run `mend <args>` after install, space-split into arguments, e.g. `get lint --force` | - |
+| `output` | Report file path, mend's own `--output` (use a `<name>.mend.json` name). A failing check still writes it rather than failing the step | `report.mend.json` |
+| `strict` | `true` fails the job when a check fails, `false` reports without failing. Either way the report is still written, uploaded, and published first | `false` |
+| `publish-url` | Full URL to POST the report to. Override for your own engine, empty to disable. Needs `id-token: write` | `https://code.toawe.me/ingest?kind=mend` |
+| `upload` | Upload the report as an artifact named after the output file | `false` |
+| `verify` | Cosign signature check | `true` |
+
+The publish endpoint receives the report JSON as the POST body with an
+`Authorization: Bearer <OIDC token>` header (token audience is the URL's origin).
+A self-hosted codeviewer exposes the same path on its own host:
+`https://<your-host>/ingest?kind=mend`.
+
+The report stays in the workspace and (when `upload: true`) is uploaded as an
+artifact named after the output file even when checks fail, so a failure report is
+downloadable from a finished run without re-running mend. Only the download temp
+dir is cleaned up. The `report-path` output exposes the report location for later
+steps.
+
+Whenever a report is produced and the job grants `id-token: write`, it is
+published to the default mend dashboard. Set `publish-url` to your own endpoint to
+send it elsewhere, or `publish-url: ""` to keep reports private (the artifact
+upload still works). Without `id-token: write`, publishing is skipped with a
+warning.
+
+Pin to an exact tag and bump it deliberately when you adopt a new release.
 
 `mend` shells out to a handful of tools (`golangci-lint`, `govulncheck`, `betterleaks`, plus `go`/`gofmt` from your
 toolchain). With `auto_install: true` (the default) it provisions any missing binary the moment a check needs it, via

@@ -1,0 +1,86 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # tracks the version the shipped .golangci.yml is validated against.
+  GOLANGCI_VERSION: v2.12.2
+
+jobs:
+  # the gate: raw upstream checks, no dependency on mend, so a change that breaks
+  # mend's own check logic is still caught here. Single Go version from go.mod.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./... -race
+
+      - name: golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_VERSION}
+          golangci-lint run
+
+  # non-gating early warning that the next Go release still builds and tests mend.
+  canary:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: stable
+
+      - run: go build ./...
+      - run: go test ./... -race
+
+  # informational: run mend on itself through our own action (verified install +
+  # report + publish), which also proves the action keeps working. Push-only so
+  # fork PRs don't hit OIDC restrictions; reports on the latest release, not the
+  # PR's code.
+  report:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Resolve latest mend release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "tag=$(gh release view --json tagName -q .tagName)" >> "$GITHUB_OUTPUT"
+
+      - uses: ./
+        with:
+          version: ${{ steps.rel.outputs.tag }}
+          output: report.mend.json
+          # publish-url defaults to the mend dashboard endpoint, so it is omitted.
