@@ -117,6 +117,7 @@ Inputs (none are required):
 | `publish-url` | Full URL to POST the report to. Override for your own engine, empty to disable. Needs `id-token: write` | `https://code.toawe.me/ingest?kind=care` |
 | `upload` | Upload the report as an artifact named after the output file | `false` |
 | `verify` | Cosign signature check | `true` |
+| `dir` | Directory care runs in (care's `--cwd`), for a module in a subdirectory with its own `go.mod`. The report still lands in the workspace root | `.` |
 
 The publish endpoint receives the report JSON as the POST body with an
 `Authorization: Bearer <OIDC token>` header (token audience is the URL's origin).

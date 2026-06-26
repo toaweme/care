@@ -68,6 +68,15 @@ inputs:
       to the Sigstore transparency log.
     required: false
     default: "true"
+  dir:
+    description: >-
+      Directory care runs in, passed through as care's --cwd. Set it for a module
+      in a subdirectory with its own go.mod (e.g. a server submodule), so one repo
+      can report each module from its own matrix job. The JSON report is still
+      written to the workspace root, so output/upload/publish are unaffected.
+      Defaults to the repository root.
+    required: false
+    default: "."
 
 outputs:
   report-path:
@@ -179,7 +188,8 @@ runs:
       shell: bash
       env:
         CARE_ARGS: ${{ inputs.args }}
-      run: care $CARE_ARGS
+        CARE_DIR: ${{ inputs.dir }}
+      run: care --cwd "$CARE_DIR" $CARE_ARGS
 
     - name: Generate report
       id: report
@@ -189,6 +199,7 @@ runs:
       shell: bash
       env:
         CARE_OUTPUT: ${{ inputs.output }}
+        CARE_DIR: ${{ inputs.dir }}
       run: |
         set -uo pipefail
         # report lives in the workspace so it survives install cleanup and is
@@ -198,10 +209,13 @@ runs:
         # the artifact is named after the report file, so output is the only place
         # the name is set (artifact names can't contain the path separator).
         echo "artifact-name=$(basename "$report")" >> "$GITHUB_OUTPUT"
+        # keep the report at the workspace root even when care runs in a subdir
+        # (--cwd), so the upload/publish steps below find it at the relative path.
+        report_abs="${GITHUB_WORKSPACE}/${report}"
         # capture care's exit code rather than failing now, so the report still
         # uploads and publishes. the gate step below re-raises it when asked.
         code=0
-        care status --json --pretty --output "$report" || code=$?
+        care --cwd "$CARE_DIR" status --json --pretty --output "$report_abs" || code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
 
     - name: Upload report artifact

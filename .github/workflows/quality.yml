@@ -83,4 +83,3 @@ jobs:
         with:
           version: ${{ steps.rel.outputs.tag }}
           output: report.care.json
-          # publish-url defaults to the care dashboard endpoint, so it is omitted.

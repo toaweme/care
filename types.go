@@ -24,6 +24,7 @@ type Installer string
 const (
 	InstallerBrew    Installer = "brew"       // homebrew formula
 	InstallerGo      Installer = "go-install" // go install <path>@<version>
+	InstallerRelease Installer = "release"    // download a verified prebuilt release binary
 	InstallerBuiltin Installer = "builtin"    // ships with the toolchain (e.g. go)
 )
 

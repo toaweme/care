@@ -37,8 +37,9 @@ func NewRunner(autoInstall bool, tools map[string]ToolConfig) Runner {
 		tools:       tools,
 		concurrency: runtime.NumCPU(),
 		installers: map[Installer]install.Installer{
-			InstallerBrew: install.Brew(),
-			InstallerGo:   install.Go(),
+			InstallerBrew:    install.Brew(),
+			InstallerGo:      install.Go(),
+			InstallerRelease: install.Release(),
 		},
 	}
 }
@@ -120,18 +121,21 @@ func (r *runner) install(ctx context.Context, tasks []Task) ([]Rendered, map[str
 }
 
 // ensureTool provisions a single tool, returning its install-phase Rendered and
-// availability. It honors operator config: a disabled tool is unavailable, a
-// version pin is applied before checking/installing.
+// availability. It honors operator config (a disabled tool is unavailable, a version
+// pin is applied first), then tries the tool's configured installer and falls back
+// through the remaining methods it carries coordinates for (download -> go install ->
+// brew), so a method being unavailable on a platform never strands an installable tool.
 func (r *runner) ensureTool(ctx context.Context, t Tool) (simpleOutput, toolState) {
 	spec := t.Spec()
 	out := func(status Status, note string) simpleOutput {
 		return simpleOutput{phase: PhaseInstall, tool: spec.Name, source: string(spec.Installer), status: status, note: note}
 	}
-	// ok stamps the resolved tool version onto an available outcome, so the tools
-	// array can report it (falling back to the configured pin when the probe finds
-	// nothing).
-	ok := func(note string) (simpleOutput, toolState) {
+	// ok stamps the resolved tool version and the method that provisioned it onto an
+	// available outcome, so the tools array can report both (falling back to the
+	// configured pin when the version probe finds nothing).
+	ok := func(note string, source Installer) (simpleOutput, toolState) {
 		o := out(StatusOK, note)
+		o.source = string(source)
 		if o.version = t.Version(ctx); o.version == "" {
 			o.version = spec.Version
 		}
@@ -144,30 +148,109 @@ func (r *runner) ensureTool(ctx context.Context, t Tool) (simpleOutput, toolStat
 	if cfg.Version != "" {
 		spec.Version = cfg.Version
 	}
-	inst := r.installers[spec.Installer]
-	if inst == nil {
+	primary := r.installers[spec.Installer]
+	if primary == nil {
 		note := "present"
 		if spec.Installer == InstallerBuiltin {
 			note = "builtin"
 		}
-		return ok(note)
+		return ok(note, spec.Installer)
 	}
-	it := install.Tool{Bin: spec.Name, Brew: spec.Brew, GoPath: spec.GoPath, Version: spec.Version}
-	if inst.IsInstalled(it) {
-		return ok("present")
+	it := toInstallTool(spec)
+	if primary.IsInstalled(it) {
+		return ok("present", spec.Installer)
 	}
 	if !r.autoInstall {
 		return out(StatusSkip, "not installed (auto-install off)"), toolState{note: "auto-install off"}
 	}
-	if !inst.Available() {
-		return out(StatusSkip, "not installed (installer unavailable)"), toolState{note: "installer unavailable"}
+
+	// walk the configured method first, then the remaining ones the tool can use.
+	var lastErr error
+	lastNote := "installer unavailable"
+	for _, key := range installChain(spec.Installer) {
+		inst := r.installers[key]
+		if inst == nil || !installerHandles(key, it) {
+			continue
+		}
+		if !inst.Available() {
+			continue
+		}
+		if err := inst.Install(ctx, it); err != nil {
+			lastErr = err
+			lastNote = "install failed"
+			continue
+		}
+		return ok(installedNote(key), key)
 	}
-	if err := inst.Install(ctx, it); err != nil {
+	if lastErr != nil {
 		o := out(StatusFail, "install failed")
-		o.err = fmt.Errorf("failed to install %q: %w", spec.Name, err)
+		o.err = fmt.Errorf("failed to install %q: %w", spec.Name, lastErr)
 		return o, toolState{note: "install failed"}
 	}
-	return ok("installed")
+	return out(StatusSkip, "not installed ("+lastNote+")"), toolState{note: lastNote}
+}
+
+// toInstallTool maps a tool's public spec onto the install package's descriptor,
+// carrying every method's coordinates so the runner can fall back between them.
+func toInstallTool(spec ToolSpec) install.Tool {
+	it := install.Tool{Bin: spec.Name, Brew: spec.Brew, GoPath: spec.GoPath, Version: spec.Version}
+	if spec.Release != nil {
+		rel := &install.ReleaseSpec{
+			BaseURL:   spec.Release.BaseURL,
+			Asset:     spec.Release.Asset,
+			Checksums: spec.Release.Checksums,
+			BinPath:   spec.Release.BinPath,
+			OS:        spec.Release.OS,
+			Arch:      spec.Release.Arch,
+		}
+		if spec.Release.Cosign != nil {
+			rel.Cosign = &install.Cosign{
+				IdentityRegexp: spec.Release.Cosign.IdentityRegexp,
+				Issuer:         spec.Release.Cosign.Issuer,
+			}
+		}
+		it.Release = rel
+	}
+	return it
+}
+
+// installChain is the ordered, de-duplicated list of methods to try for a tool: its
+// configured installer first, then download, go install, and brew as fallbacks.
+func installChain(primary Installer) []Installer {
+	order := []Installer{primary, InstallerRelease, InstallerGo, InstallerBrew}
+	seen := make(map[Installer]bool, len(order))
+	chain := make([]Installer, 0, len(order))
+	for _, key := range order {
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		chain = append(chain, key)
+	}
+	return chain
+}
+
+// installerHandles reports whether a method has the coordinates it needs to install
+// the tool, so the chain skips methods a tool carries nothing for.
+func installerHandles(key Installer, it install.Tool) bool {
+	switch key {
+	case InstallerRelease:
+		return it.Release != nil && it.Version != ""
+	case InstallerGo:
+		return it.GoPath != ""
+	case InstallerBrew:
+		return it.Brew != ""
+	default:
+		return false
+	}
+}
+
+// installedNote labels how a tool was provisioned in its install-phase outcome.
+func installedNote(key Installer) string {
+	if key == InstallerRelease {
+		return "downloaded"
+	}
+	return "installed"
 }
 
 // dispatch runs the tasks through a bounded worker pool.

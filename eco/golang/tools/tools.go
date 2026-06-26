@@ -6,14 +6,32 @@ package tools
 
 import "github.com/toaweme/care"
 
-// NewGolangCiLint builds the golangci-lint tool, pinned to version when non-empty.
+// defaultGolangCiVersion is the golangci-lint release the download installer pins to
+// when the operator configures none. It tracks the version the shipped .golangci.yml
+// is validated against (mirrored by GOLANGCI_VERSION in the CI workflow); bump both
+// together. A pin is required for the download method, which names an exact tag.
+const defaultGolangCiVersion = "v2.12.2"
+
+// NewGolangCiLint builds the golangci-lint tool, pinned to version when non-empty and
+// to defaultGolangCiVersion otherwise. It installs from the verified prebuilt release
+// by default (fast, no compile), falling back to `go install` and brew when a
+// download is not possible.
 func NewGolangCiLint(version string) care.Tool {
+	if version == "" {
+		version = defaultGolangCiVersion
+	}
 	return care.NewTool(care.ToolSpec{
 		Name:      "golangci-lint",
-		Installer: care.InstallerBrew,
+		Installer: care.InstallerRelease,
 		Brew:      "golangci-lint",
 		GoPath:    "github.com/golangci/golangci-lint/v2/cmd/golangci-lint",
-		Version:   version,
+		Release: &care.ReleaseSpec{
+			BaseURL:   "https://github.com/golangci/golangci-lint/releases/download/{tag}",
+			Asset:     "golangci-lint-{version}-{os}-{arch}.tar.gz",
+			Checksums: "golangci-lint-{version}-checksums.txt",
+			BinPath:   "golangci-lint-{version}-{os}-{arch}/golangci-lint",
+		},
+		Version: version,
 	})
 }
 
