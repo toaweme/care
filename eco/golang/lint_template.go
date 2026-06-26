@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/toaweme/mend/templates"
+	"github.com/toaweme/care/templates"
 )
 
 // golangciTemplateFile is the canonical golangci-lint config shipped in the

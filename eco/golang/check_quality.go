@@ -9,17 +9,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/toaweme/mend"
+	"github.com/toaweme/care"
 )
 
 type qualityCheck struct {
-	mend.BaseCheck
-	golangci mend.Tool
-	gotool   mend.Tool
-	gofmt    mend.Tool
+	care.BaseCheck
+	golangci care.Tool
+	gotool   care.Tool
+	gofmt    care.Tool
 }
 
-var _ mend.Quality = (*qualityCheck)(nil)
+var _ care.Quality = (*qualityCheck)(nil)
 
 // NewQuality is the single static-analysis feature for Go. When a .golangci.yml
 // governs the repo it runs golangci-lint (which already bundles govet and the
@@ -27,11 +27,11 @@ var _ mend.Quality = (*qualityCheck)(nil)
 // `go vet` + `gofmt -l`, reported as the same QualityReport. This is one "lint"
 // feature rather than three overlapping ones - vet and format used to be separate
 // slots that simply self-skipped whenever golangci governed the repo (which, given
-// `mend setup lint`, is every repo). In fix mode (QualityRunOptions.Fix) it formats
+// `care setup lint`, is every repo). In fix mode (QualityRunOptions.Fix) it formats
 // and applies golangci's auto-fixes, or `go fmt` as the fallback.
-func NewQuality(golangci, gotool, gofmt mend.Tool) mend.Quality {
+func NewQuality(golangci, gotool, gofmt care.Tool) care.Quality {
 	return &qualityCheck{
-		BaseCheck: mend.NewBaseCheck("golangci-lint", golangci, gotool, gofmt),
+		BaseCheck: care.NewBaseCheck("golangci-lint", golangci, gotool, gofmt),
 		golangci:  golangci,
 		gotool:    gotool,
 		gofmt:     gofmt,
@@ -40,11 +40,11 @@ func NewQuality(golangci, gotool, gofmt mend.Tool) mend.Quality {
 
 func (f *qualityCheck) Applies(dir string) bool { return hasGoMod(dir) }
 
-func (f *qualityCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) mend.Output[mend.QualityReport] {
+func (f *qualityCheck) Run(ctx context.Context, dir string, opts care.RunOptions) care.Output[care.QualityReport] {
 	hasCfg := hasGolangciConfig(dir)
 	if opts.Quality.Fix {
 		if err := f.format(ctx, dir, hasCfg); err != nil {
-			return mend.Errored[mend.QualityReport]("tool failed", err)
+			return care.Errored[care.QualityReport]("tool failed", err)
 		}
 	}
 	if hasCfg {
@@ -67,14 +67,14 @@ func (f *qualityCheck) format(ctx context.Context, dir string, hasCfg bool) erro
 	return nil
 }
 
-func (f *qualityCheck) runGolangci(ctx context.Context, dir string, opts mend.RunOptions) mend.Output[mend.QualityReport] {
+func (f *qualityCheck) runGolangci(ctx context.Context, dir string, opts care.RunOptions) care.Output[care.QualityReport] {
 	// golangci-lint v2 emits the default text formatter to stdout alongside any JSON
 	// formatter, so JSON on stdout is interleaved with code snippets. Route the JSON
 	// report into its own file to keep it clean; stdout/stderr then carry only the
 	// human-readable text surfaced when a run fails for a non-lint reason.
-	report, err := os.CreateTemp("", "mend-golangci-*.json")
+	report, err := os.CreateTemp("", "care-golangci-*.json")
 	if err != nil {
-		return mend.Errored[mend.QualityReport]("tool failed", fmt.Errorf("failed to create golangci-lint report file: %w", err))
+		return care.Errored[care.QualityReport]("tool failed", fmt.Errorf("failed to create golangci-lint report file: %w", err))
 	}
 	defer os.Remove(report.Name())
 	report.Close()
@@ -86,42 +86,42 @@ func (f *qualityCheck) runGolangci(ctx context.Context, dir string, opts mend.Ru
 	args = append(args, "./...")
 	out, err := f.golangci.Exec(ctx, dir, args...)
 	if err == nil {
-		return mend.Pass(mend.QualityReport{})
+		return care.Pass(care.QualityReport{})
 	}
 	issues := parseGolangciJSON(report.Name())
 	if len(issues) == 0 {
-		return mend.Errored[mend.QualityReport]("tool failed", fmt.Errorf("failed to run golangci-lint: %w\n%s", err, trimOutput(out)))
+		return care.Errored[care.QualityReport]("tool failed", fmt.Errorf("failed to run golangci-lint: %w\n%s", err, trimOutput(out)))
 	}
-	return mend.Fail(mend.QualityReport{Issues: issues})
+	return care.Fail(care.QualityReport{Issues: issues})
 }
 
 // runFallback is the no-config baseline: `go vet` (a failure when it finds anything)
 // and `gofmt -l` (a warning), merged into one QualityReport with each finding tagged
 // by its source so the row reads the same as a golangci run.
-func (f *qualityCheck) runFallback(ctx context.Context, dir string) mend.Output[mend.QualityReport] {
-	var issues []mend.QualityIssue
+func (f *qualityCheck) runFallback(ctx context.Context, dir string) care.Output[care.QualityReport] {
+	var issues []care.QualityIssue
 	vetOut, _ := f.gotool.Exec(ctx, dir, "vet", "./...") // non-zero exit on findings is expected
 	for _, d := range parseDiagnostics(vetOut) {
-		issues = append(issues, mend.QualityIssue{File: d.File, Line: d.Line, Col: d.Col, Linter: "govet", Message: d.Message})
+		issues = append(issues, care.QualityIssue{File: d.File, Line: d.Line, Col: d.Col, Linter: "govet", Message: d.Message})
 	}
 	vetFailed := len(issues) > 0
 
 	fmtOut, _ := f.gofmt.Exec(ctx, dir, "-l", ".")
 	for _, file := range parseGofmtList(fmtOut) {
-		issues = append(issues, mend.QualityIssue{File: file, Linter: "gofmt", Message: "not gofmt'd"})
+		issues = append(issues, care.QualityIssue{File: file, Linter: "gofmt", Message: "not gofmt'd"})
 	}
 
 	switch {
 	case len(issues) == 0:
-		return mend.Pass(mend.QualityReport{})
+		return care.Pass(care.QualityReport{})
 	case vetFailed:
-		return mend.Fail(mend.QualityReport{Issues: issues})
+		return care.Fail(care.QualityReport{Issues: issues})
 	default:
-		return mend.Warn(mend.QualityReport{Issues: issues}) // formatting only, never blocks
+		return care.Warn(care.QualityReport{Issues: issues}) // formatting only, never blocks
 	}
 }
 
-func parseGolangciJSON(path string) []mend.QualityIssue {
+func parseGolangciJSON(path string) []care.QualityIssue {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
@@ -141,9 +141,9 @@ func parseGolangciJSON(path string) []mend.QualityIssue {
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		return nil
 	}
-	issues := make([]mend.QualityIssue, 0, len(parsed.Issues))
+	issues := make([]care.QualityIssue, 0, len(parsed.Issues))
 	for _, i := range parsed.Issues {
-		issues = append(issues, mend.QualityIssue{File: i.Pos.Filename, Line: i.Pos.Line, Col: i.Pos.Column, Linter: i.FromLinter, Severity: i.Severity, Message: i.Text})
+		issues = append(issues, care.QualityIssue{File: i.Pos.Filename, Line: i.Pos.Line, Col: i.Pos.Column, Linter: i.FromLinter, Severity: i.Severity, Message: i.Text})
 	}
 	return issues
 }

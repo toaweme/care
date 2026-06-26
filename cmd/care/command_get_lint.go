@@ -9,9 +9,9 @@ import (
 	"github.com/toaweme/cli"
 	"github.com/toaweme/http"
 
-	"github.com/toaweme/mend/cmd/mend/output"
-	"github.com/toaweme/mend/eco/golang"
-	"github.com/toaweme/mend/eco/shared/sync"
+	"github.com/toaweme/care/cmd/care/output"
+	"github.com/toaweme/care/eco/golang"
+	"github.com/toaweme/care/eco/shared/sync"
 )
 
 // GetLintConfig configures the lint scaffolding subcommand: the shared sync
@@ -20,7 +20,7 @@ import (
 // source verbatim (no placeholder expansion).
 type GetLintConfig struct {
 	GetConfig
-	ImportSortPrefixes []string `arg:"isp" short:"i" sep:"," env:"MEND_GET_IMPORT_SORT_PREFIXES" help:"Import path prefixes grouped right after stdlib (goimports local-prefixes); comma-separated. Defaults to the repo's module path. Ignored with --from"`
+	ImportSortPrefixes []string `arg:"isp" short:"i" sep:"," env:"CARE_GET_IMPORT_SORT_PREFIXES" help:"Import path prefixes grouped right after stdlib (goimports local-prefixes); comma-separated. Defaults to the repo's module path. Ignored with --from"`
 }
 
 // GetLintCommand writes a golangci-lint config into the current repository.

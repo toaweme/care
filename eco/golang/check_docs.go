@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/toaweme/mend"
+	"github.com/toaweme/care"
 )
 
 // DefaultDocCoverage is the doc-comment coverage below which the docs check warns
@@ -20,29 +20,29 @@ import (
 const DefaultDocCoverage = 80
 
 type docsCheck struct {
-	mend.BaseCheck
+	care.BaseCheck
 	minCoverage float64 // warn below this percent; <=0 falls back to DefaultDocCoverage
 }
 
-var _ mend.Docs = (*docsCheck)(nil)
+var _ care.Docs = (*docsCheck)(nil)
 
 // NewDocs is the Docs feature for Go: it walks the source with go/ast and reports
 // what fraction of exported declarations (funcs, methods, types, consts, vars) carry
 // a doc comment, warning when coverage falls below minCoverage (or DefaultDocCoverage
 // when minCoverage is unset).
-func NewDocs(minCoverage float64) mend.Docs {
-	return &docsCheck{BaseCheck: mend.NewBaseCheck("go-docs"), minCoverage: minCoverage}
+func NewDocs(minCoverage float64) care.Docs {
+	return &docsCheck{BaseCheck: care.NewBaseCheck("go-docs"), minCoverage: minCoverage}
 }
 
 func (f *docsCheck) Applies(dir string) bool { return hasGoMod(dir) }
 
-func (f *docsCheck) Run(_ context.Context, dir string, _ mend.RunOptions) mend.Output[mend.DocsReport] {
+func (f *docsCheck) Run(_ context.Context, dir string, _ care.RunOptions) care.Output[care.DocsReport] {
 	report, err := docCoverage(dir)
 	if err != nil {
-		return mend.Errored[mend.DocsReport]("walk failed", fmt.Errorf("failed to scan exported symbols in %q: %w", dir, err))
+		return care.Errored[care.DocsReport]("walk failed", fmt.Errorf("failed to scan exported symbols in %q: %w", dir, err))
 	}
 	if report.Total == 0 {
-		return mend.Pass(report)
+		return care.Pass(report)
 	}
 	minCov := f.minCoverage
 	if minCov <= 0 {
@@ -50,15 +50,15 @@ func (f *docsCheck) Run(_ context.Context, dir string, _ mend.RunOptions) mend.O
 	}
 	pct := float64(report.Documented) / float64(report.Total) * 100
 	if pct < minCov {
-		return mend.Warn(report)
+		return care.Warn(report)
 	}
-	return mend.Pass(report)
+	return care.Pass(report)
 }
 
 // docCoverage walks the module's non-test, non-vendored Go files and tallies which
 // exported declarations carry a doc comment.
-func docCoverage(dir string) (mend.DocsReport, error) {
-	var report mend.DocsReport
+func docCoverage(dir string) (care.DocsReport, error) {
+	var report care.DocsReport
 	fset := token.NewFileSet()
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -86,14 +86,14 @@ func docCoverage(dir string) (mend.DocsReport, error) {
 
 // scanDecls tallies the exported declarations in one file, appending the
 // undocumented ones to the report.
-func scanDecls(file *ast.File, fset *token.FileSet, rel string, report *mend.DocsReport) {
+func scanDecls(file *ast.File, fset *token.FileSet, rel string, report *care.DocsReport) {
 	record := func(documented bool, kind, name string, pos token.Pos) {
 		report.Total++
 		if documented {
 			report.Documented++
 			return
 		}
-		report.Missing = append(report.Missing, mend.DocSymbol{File: rel, Line: fset.Position(pos).Line, Kind: kind, Name: name})
+		report.Missing = append(report.Missing, care.DocSymbol{File: rel, Line: fset.Position(pos).Line, Kind: kind, Name: name})
 	}
 	for _, decl := range file.Decls {
 		switch d := decl.(type) {

@@ -6,24 +6,24 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/internal/devops/git"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/internal/devops/git"
 )
 
 type secrets struct {
-	mend.BaseCheck
-	tool    mend.Tool
+	care.BaseCheck
+	tool    care.Tool
 	history bool
 }
 
-var _ mend.Secrets = (*secrets)(nil)
+var _ care.Secrets = (*secrets)(nil)
 
 // NewBetterleaks scans a repo for leaked secrets via the injected betterleaks tool.
 // history scans git history too (the default is the working tree only). It is
 // language-agnostic: betterleaks works on any repository.
-func NewBetterleaks(tool mend.Tool, history bool) mend.Secrets {
+func NewBetterleaks(tool care.Tool, history bool) care.Secrets {
 	return &secrets{
-		BaseCheck: mend.NewBaseCheck("betterleaks", tool),
+		BaseCheck: care.NewBaseCheck("betterleaks", tool),
 		tool:      tool,
 		history:   history,
 	}
@@ -31,10 +31,10 @@ func NewBetterleaks(tool mend.Tool, history bool) mend.Secrets {
 
 func (f *secrets) Applies(string) bool { return true }
 
-func (f *secrets) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.Output[mend.SecretReport] {
-	report, err := os.CreateTemp("", "mend-betterleaks-*.json")
+func (f *secrets) Run(ctx context.Context, dir string, _ care.RunOptions) care.Output[care.SecretReport] {
+	report, err := os.CreateTemp("", "care-betterleaks-*.json")
 	if err != nil {
-		return mend.Errored[mend.SecretReport]("setup failed", fmt.Errorf("failed to create betterleaks report file: %w", err))
+		return care.Errored[care.SecretReport]("setup failed", fmt.Errorf("failed to create betterleaks report file: %w", err))
 	}
 	reportPath := report.Name()
 	report.Close()
@@ -51,11 +51,11 @@ func (f *secrets) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.O
 	args := []string{scan, ".", "--no-banner", "--redact=100", "--report-format", "json", "--report-path", reportPath}
 	_, err = f.tool.Exec(ctx, dir, args...)
 	if err == nil {
-		return mend.Pass(mend.SecretReport{})
+		return care.Pass(care.SecretReport{})
 	}
 	findings := parseBetterleaksJSON(reportPath)
 	if len(findings) == 0 {
-		return mend.Errored[mend.SecretReport]("tool failed", fmt.Errorf("failed to run betterleaks: %w", err))
+		return care.Errored[care.SecretReport]("tool failed", fmt.Errorf("failed to run betterleaks: %w", err))
 	}
 	// a gitignored file (e.g. a local .env) is the correct home for secrets, not a
 	// leak, so drop working-tree findings in ignored files. History scans keep
@@ -64,14 +64,14 @@ func (f *secrets) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.O
 	if !f.history {
 		findings = dropIgnored(dir, findings)
 		if len(findings) == 0 {
-			return mend.Pass(mend.SecretReport{})
+			return care.Pass(care.SecretReport{})
 		}
 	}
-	return mend.Fail(mend.SecretReport{Findings: findings})
+	return care.Fail(care.SecretReport{Findings: findings})
 }
 
 // dropIgnored removes findings whose file git ignores in dir.
-func dropIgnored(dir string, findings []mend.SecretFinding) []mend.SecretFinding {
+func dropIgnored(dir string, findings []care.SecretFinding) []care.SecretFinding {
 	files := make([]string, 0, len(findings))
 	for _, fnd := range findings {
 		files = append(files, fnd.File)
@@ -80,7 +80,7 @@ func dropIgnored(dir string, findings []mend.SecretFinding) []mend.SecretFinding
 	if len(ignored) == 0 {
 		return findings
 	}
-	kept := make([]mend.SecretFinding, 0, len(findings))
+	kept := make([]care.SecretFinding, 0, len(findings))
 	for _, fnd := range findings {
 		if !ignored[fnd.File] {
 			kept = append(kept, fnd)
@@ -92,7 +92,7 @@ func dropIgnored(dir string, findings []mend.SecretFinding) []mend.SecretFinding
 // parseBetterleaksJSON reads betterleaks' JSON report file into structured
 // findings. A missing or unparseable report yields nil so the caller falls back
 // to a note.
-func parseBetterleaksJSON(path string) []mend.SecretFinding {
+func parseBetterleaksJSON(path string) []care.SecretFinding {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
@@ -109,9 +109,9 @@ func parseBetterleaksJSON(path string) []mend.SecretFinding {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil
 	}
-	findings := make([]mend.SecretFinding, 0, len(raw))
+	findings := make([]care.SecretFinding, 0, len(raw))
 	for _, r := range raw {
-		findings = append(findings, mend.SecretFinding{
+		findings = append(findings, care.SecretFinding{
 			Rule:        r.RuleID,
 			Description: r.Description,
 			File:        r.File,

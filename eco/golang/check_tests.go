@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/eco/golang/inspect"
-	"github.com/toaweme/mend/eco/golang/tests"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/eco/golang/inspect"
+	"github.com/toaweme/care/eco/golang/tests"
 )
 
 type testsCheck struct {
-	mend.BaseCheck
-	profiles []mend.RunProfile
+	care.BaseCheck
+	profiles []care.RunProfile
 }
 
 var (
-	_ mend.Tests    = (*testsCheck)(nil)
-	_ mend.Profiled = (*testsCheck)(nil)
+	_ care.Tests    = (*testsCheck)(nil)
+	_ care.Profiled = (*testsCheck)(nil)
 )
 
 // NewTests runs the repo's tests, collecting coverage and running with -race per the
@@ -24,22 +24,22 @@ var (
 // (e.g. plain + -race + a build-tag variant); an empty list runs once under a
 // synthesized default profile that honors the CLI --race/--coverage flags. The
 // injected go tool is its install dependency.
-func NewTests(tool mend.Tool, profiles []mend.RunProfile) mend.Tests {
-	return &testsCheck{BaseCheck: mend.NewBaseCheck("go-test", tool), profiles: profiles}
+func NewTests(tool care.Tool, profiles []care.RunProfile) care.Tests {
+	return &testsCheck{BaseCheck: care.NewBaseCheck("go-test", tool), profiles: profiles}
 }
 
 func (f *testsCheck) Applies(dir string) bool { return hasGoMod(dir) }
 
 // Profiles returns the configured run-profiles, or a single default when none are
 // configured (so the feature runs exactly once with today's behavior).
-func (f *testsCheck) Profiles() []mend.RunProfile {
+func (f *testsCheck) Profiles() []care.RunProfile {
 	if len(f.profiles) == 0 {
-		return []mend.RunProfile{{Name: "default"}}
+		return []care.RunProfile{{Name: "default"}}
 	}
 	return f.profiles
 }
 
-func (f *testsCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) mend.Output[mend.TestReport] {
+func (f *testsCheck) Run(ctx context.Context, dir string, opts care.RunOptions) care.Output[care.TestReport] {
 	prof := opts.Profile
 	// CLI --race/--coverage OR into every profile, so a global toggle applies across
 	// all configured runs; an explicit profile flag is never turned off by them.
@@ -48,9 +48,9 @@ func (f *testsCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) 
 
 	rep, err := tests.NewRunner(tests.Options{Race: race, Coverage: coverage, Tags: prof.Tags, Args: prof.Args}).Run(ctx, dir)
 	if err != nil {
-		return mend.Errored[mend.TestReport]("tool failed", fmt.Errorf("failed to run tests in %q: %w", dir, err))
+		return care.Errored[care.TestReport]("tool failed", fmt.Errorf("failed to run tests in %q: %w", dir, err))
 	}
-	report := mend.TestReport{ModulePath: rep.Module, Total: rep.Total, WithCoverage: coverage}
+	report := care.TestReport{ModulePath: rep.Module, Total: rep.Total, WithCoverage: coverage}
 	if report.ModulePath == "" {
 		if mod, err := inspect.ReadModulePath(dir); err == nil {
 			report.ModulePath = mod
@@ -58,21 +58,21 @@ func (f *testsCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) 
 	}
 	var failed int
 	for _, p := range rep.Packages {
-		suite := mend.TestSuite{
+		suite := care.TestSuite{
 			Name: p.Name, Coverage: p.Coverage, Statements: p.Statements, Covered: p.Covered,
 			Passed: p.Passed, Skipped: p.Skipped, DurationMs: p.DurationMs, Output: p.Output,
 		}
 		for _, tc := range p.Tests {
-			suite.Tests = append(suite.Tests, mend.TestCase{Name: tc.Name, Action: tc.Action, ElapsedMs: tc.ElapsedMs, Output: tc.Output})
+			suite.Tests = append(suite.Tests, care.TestCase{Name: tc.Name, Action: tc.Action, ElapsedMs: tc.ElapsedMs, Output: tc.Output})
 			countCase(&report.Cases, tc.Action)
 		}
 		for _, fc := range p.Files {
-			suite.Files = append(suite.Files, mend.FileCoverage{
+			suite.Files = append(suite.Files, care.FileCoverage{
 				Path: fc.Path, Statements: fc.Statements, Covered: fc.Covered, Uncovered: lineRanges(fc.Uncovered),
 			})
 		}
 		for _, fn := range p.Funcs {
-			suite.Funcs = append(suite.Funcs, mend.FuncCoverage{File: fn.File, Line: fn.Line, Name: fn.Name, Coverage: fn.Coverage})
+			suite.Funcs = append(suite.Funcs, care.FuncCoverage{File: fn.File, Line: fn.Line, Name: fn.Name, Coverage: fn.Coverage})
 		}
 		report.Suites = append(report.Suites, suite)
 		if untested(p, coverage) {
@@ -83,9 +83,9 @@ func (f *testsCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) 
 		}
 	}
 	if failed > 0 {
-		return mend.Fail(report)
+		return care.Fail(report)
 	}
-	return mend.Pass(report)
+	return care.Pass(report)
 }
 
 // untested reports whether a package has no effective test coverage: no test files,
@@ -98,7 +98,7 @@ func untested(p tests.PackageResult, coverage bool) bool {
 }
 
 // countCase tallies one test function's outcome into the report's case counts.
-func countCase(c *mend.TestCounts, action string) {
+func countCase(c *care.TestCounts, action string) {
 	switch action {
 	case "pass":
 		c.Passed++
@@ -109,13 +109,13 @@ func countCase(c *mend.TestCounts, action string) {
 	}
 }
 
-func lineRanges(in []tests.LineRange) []mend.LineRange {
+func lineRanges(in []tests.LineRange) []care.LineRange {
 	if len(in) == 0 {
 		return nil
 	}
-	out := make([]mend.LineRange, 0, len(in))
+	out := make([]care.LineRange, 0, len(in))
 	for _, r := range in {
-		out = append(out, mend.LineRange{Start: r.Start, End: r.End})
+		out = append(out, care.LineRange{Start: r.Start, End: r.End})
 	}
 	return out
 }

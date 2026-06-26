@@ -10,17 +10,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/eco/golang/gomod"
-	"github.com/toaweme/mend/eco/golang/minver"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/eco/golang/gomod"
+	"github.com/toaweme/care/eco/golang/minver"
 )
 
 type runtimeCheck struct {
-	mend.BaseCheck
-	tool mend.Tool
+	care.BaseCheck
+	tool care.Tool
 }
 
-var _ mend.Runtime = (*runtimeCheck)(nil)
+var _ care.Runtime = (*runtimeCheck)(nil)
 
 // NewRuntime is the Runtime feature for Go: it reports the module's `go` directive
 // against the lowest it could declare, max(code floor, dependency floor). Go is
@@ -30,27 +30,27 @@ var _ mend.Runtime = (*runtimeCheck)(nil)
 // authoritative. The check is purely informational - it always passes (weight-0 in
 // the rating engine), surfacing the version facts and a "(min X)" hint when the
 // directive could drop, but never warning or failing on its own.
-func NewRuntime(tool mend.Tool) mend.Runtime {
-	return &runtimeCheck{BaseCheck: mend.NewBaseCheck("go-runtime", tool), tool: tool}
+func NewRuntime(tool care.Tool) care.Runtime {
+	return &runtimeCheck{BaseCheck: care.NewBaseCheck("go-runtime", tool), tool: tool}
 }
 
 func (f *runtimeCheck) Applies(dir string) bool { return hasGoMod(dir) }
 
-func (f *runtimeCheck) Run(ctx context.Context, dir string, _ mend.RunOptions) mend.Output[mend.RuntimeReport] {
+func (f *runtimeCheck) Run(ctx context.Context, dir string, _ care.RunOptions) care.Output[care.RuntimeReport] {
 	d, err := gomod.ReadDirectives(dir)
 	if err != nil {
-		return mend.Errored[mend.RuntimeReport]("read failed", fmt.Errorf("failed to read go.mod directives: %w", err))
+		return care.Errored[care.RuntimeReport]("read failed", fmt.Errorf("failed to read go.mod directives: %w", err))
 	}
-	report := mend.RuntimeReport{
-		Version: mend.RuntimeVersion{Declared: mend.Bound{Min: d.GoVersion}},
-		Toolchain: mend.RuntimeToolchain{
+	report := care.RuntimeReport{
+		Version: care.RuntimeVersion{Declared: care.Bound{Min: d.GoVersion}},
+		Toolchain: care.RuntimeToolchain{
 			Running: goBinaryVersion(ctx, f.tool),
 			Pinned:  d.Toolchain,
 			PinNote: toolchainNote(d),
 		},
 	}
 	if codeVer, reason, ok := codeFloor(ctx, dir); ok {
-		report.Version.Required = mend.Bound{Min: codeVer}
+		report.Version.Required = care.Bound{Min: codeVer}
 		report.Version.RequiredReason = reason
 	}
 
@@ -69,16 +69,16 @@ func (f *runtimeCheck) Run(ctx context.Context, dir string, _ mend.RunOptions) m
 
 	// informational only: always pass, letting the report's labels and "(min X)"
 	// hint speak without warning or failing.
-	return mend.Pass(report)
+	return care.Pass(report)
 }
 
 // runtimeDeps maps the cache-read dependency list to the report shape, sorted by
 // declared version descending (the floor-setting deps first) then module name, so
 // the verbose view leads with what constrains the floor.
-func runtimeDeps(deps []gomod.DepGo) []mend.RuntimeDep {
-	out := make([]mend.RuntimeDep, 0, len(deps))
+func runtimeDeps(deps []gomod.DepGo) []care.RuntimeDep {
+	out := make([]care.RuntimeDep, 0, len(deps))
 	for _, d := range deps {
-		out = append(out, mend.RuntimeDep{Module: d.Module, Version: d.Version, Min: d.Go})
+		out = append(out, care.RuntimeDep{Module: d.Module, Version: d.Version, Min: d.Go})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Min != out[j].Min {
@@ -141,7 +141,7 @@ func codeFloor(ctx context.Context, dir string) (ver, reason string, ok bool) {
 // goModCache resolves the module cache directory via the injected go tool, falling
 // back to $GOMODCACHE. An empty result makes ReadDepFloor count every dep as missing.
 // Shared by the Runtime and Dependencies checks, which both read the dep cache.
-func goModCache(ctx context.Context, tool mend.Tool, dir string) string {
+func goModCache(ctx context.Context, tool care.Tool, dir string) string {
 	out, err := tool.ExecStdout(ctx, dir, "env", "GOMODCACHE")
 	if err != nil {
 		return os.Getenv("GOMODCACHE")
@@ -152,7 +152,7 @@ func goModCache(ctx context.Context, tool mend.Tool, dir string) string {
 // goBinaryVersion returns the toolchain actually running (`go env GOVERSION`, e.g.
 // "go1.26.0"), or "" when the go tool cannot be probed. It is shown as context next
 // to the declared go.mod version - what you build with versus what you require.
-func goBinaryVersion(ctx context.Context, tool mend.Tool) string {
+func goBinaryVersion(ctx context.Context, tool care.Tool) string {
 	out, err := tool.ExecStdout(ctx, ".", "env", "GOVERSION")
 	if err != nil {
 		return ""

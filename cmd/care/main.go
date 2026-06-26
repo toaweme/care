@@ -13,15 +13,15 @@ import (
 	yamlcodec "github.com/toaweme/cli/config/addons/yaml"
 	"github.com/toaweme/http"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/cmd/mend/output"
-	"github.com/toaweme/mend/eco/golang"
-	gotools "github.com/toaweme/mend/eco/golang/tools"
-	"github.com/toaweme/mend/eco/shared"
-	sharedtools "github.com/toaweme/mend/eco/shared/tools"
-	"github.com/toaweme/mend/internal/devops/git"
-	"github.com/toaweme/mend/internal/rating"
-	"github.com/toaweme/mend/templates"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/cmd/care/output"
+	"github.com/toaweme/care/eco/golang"
+	gotools "github.com/toaweme/care/eco/golang/tools"
+	"github.com/toaweme/care/eco/shared"
+	sharedtools "github.com/toaweme/care/eco/shared/tools"
+	"github.com/toaweme/care/internal/devops/git"
+	"github.com/toaweme/care/internal/rating"
+	"github.com/toaweme/care/templates"
 )
 
 var version = "0.0.0"
@@ -29,13 +29,13 @@ var version = "0.0.0"
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
-		slog.Error("mend", "error", fmt.Errorf("failed to get cwd: %w", err))
+		slog.Error("care", "error", fmt.Errorf("failed to get cwd: %w", err))
 		os.Exit(1)
 	}
 	if err := run(cwd, os.Args[1:]); err != nil {
 		// failing checks are already rendered; exit non-zero without an app-error log.
 		if !errors.Is(err, errChecksFailed) {
-			slog.Error("mend", "error", fmt.Errorf("failed to run: %w", err))
+			slog.Error("care", "error", fmt.Errorf("failed to run: %w", err))
 		}
 		os.Exit(1)
 	}
@@ -49,15 +49,15 @@ func run(cwd string, args []string) error {
 
 	yml := yamlcodec.New(".yml")
 	stores := []config.Store{
-		config.NewFileStore(config.HomePath(".mend"), "mend", true, yml),
-		config.NewFileStore(cwd, "mend", true, yml),
+		config.NewFileStore(config.HomePath(".care"), "care", true, yml),
+		config.NewFileStore(cwd, "care", true, yml),
 	}
-	cfg := mend.Defaults()
+	cfg := care.Defaults()
 	for _, store := range stores {
 		// optional: a missing config store layers nothing and is not an error.
 		_ = store.Read(&cfg)
 	}
-	app := cli.NewApp(cli.Config{Name: "mend", Version: version}, cli.GlobalFlags{Cwd: cwd})
+	app := cli.NewApp(cli.Config{Name: "care", Version: version}, cli.GlobalFlags{Cwd: cwd})
 
 	// build the tools at the top (with any operator version pin), then inject them
 	// into the features that fill the ecosystem's feature slots.
@@ -67,7 +67,7 @@ func run(cwd string, args []string) error {
 	gotool := gotools.Go()
 	gofmt := gotools.Gofmt()
 
-	eco := &mend.Ecosystem{
+	eco := &care.Ecosystem{
 		VersionControl:  shared.NewVersionControl(),
 		Build:           golang.NewBuild(gotool),
 		Quality:         golang.NewQuality(golangci, gotool, gofmt),
@@ -81,7 +81,7 @@ func run(cwd string, args []string) error {
 		Fixer:           golang.NewFixer(golangci, gotool),
 	}
 
-	runner := mend.NewRunner(cfg.AutoInstall, cfg.Tools)
+	runner := care.NewRunner(cfg.AutoInstall, cfg.Tools)
 	grading := rating.FromConfig(cfg.Health.Weights, cfg.Health.Caps)
 	statusCommand := NewStatusCommand(eco, runner, golang.ModulePath, cfg.CheckDisabled, resolveVC, grading)
 	helpCommand := builtinCommands.NewHelpCommand(app.Config, app.Commands, app.OutputFormats, app.DefaultCommand)
@@ -90,7 +90,7 @@ func run(cwd string, args []string) error {
 	app.Add("status", statusCommand)
 
 	// an empty base URL lets the fetcher GET fully-qualified raw URLs verbatim.
-	httpClient := http.NewClient(http.Config{UserAgent: "mend"})
+	httpClient := http.NewClient(http.Config{UserAgent: "care"})
 	getCommand := NewGetCommand(httpClient, templates.FS.ReadFile)
 	app.Add("get", getCommand)
 	getCommand.Add("lint", NewGetLintCommand(httpClient, templates.FS.ReadFile, golang.ModulePath))
@@ -164,12 +164,12 @@ func ciRef(branch, tag string) (string, string) {
 	return branch, tag
 }
 
-func boolOption(cfg mend.Config, check, option string) bool {
+func boolOption(cfg care.Config, check, option string) bool {
 	v, err := strconv.ParseBool(cfg.CheckOption(check, option))
 	return err == nil && v
 }
 
-func floatOption(cfg mend.Config, check, option string) float64 {
+func floatOption(cfg care.Config, check, option string) float64 {
 	v, err := strconv.ParseFloat(cfg.CheckOption(check, option), 64)
 	if err != nil {
 		return 0

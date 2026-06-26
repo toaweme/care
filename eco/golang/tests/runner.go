@@ -49,7 +49,7 @@ func (r *GoTestRunner) Run(ctx context.Context, dir string) (Report, error) {
 
 	var profilePath string
 	if r.coverage {
-		f, err := os.CreateTemp("", "mend-cover-*.out")
+		f, err := os.CreateTemp("", "care-cover-*.out")
 		if err != nil {
 			return Report{}, fmt.Errorf("failed to create coverage profile: %w", err)
 		}

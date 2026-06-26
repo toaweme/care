@@ -32,20 +32,20 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
-      - name: Install mend
-        run: go install github.com/toaweme/mend/cmd/mend@latest
+      - name: Install care
+        run: go install github.com/toaweme/care/cmd/care@latest
 
-      - name: Generate mend report
-        run: mend status --json --pretty --output report.mend.json || true
+      - name: Generate care report
+        run: care status --json --pretty --output report.care.json || true
 
       - name: Publish report
         run: |
           set -euo pipefail
-          [ -s report.mend.json ] || { echo "no report produced; nothing to publish"; exit 0; }
+          [ -s report.care.json ] || { echo "no report produced; nothing to publish"; exit 0; }
           token="$(curl -sS \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$CODEVIEWER_URL" | jq -r .value)"
-          curl -fsS -X POST "$CODEVIEWER_URL/ingest?kind=mend" \
+          curl -fsS -X POST "$CODEVIEWER_URL/ingest?kind=care" \
             -H "Authorization: Bearer $token" \
-            --data-binary @report.mend.json
-          echo \n"published mend report to $CODEVIEWER_URL"
+            --data-binary @report.care.json
+          echo \n"published care report to $CODEVIEWER_URL"

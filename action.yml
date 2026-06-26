@@ -1,5 +1,5 @@
-name: mend
-description: Install the mend CLI from a verified release, run it, and optionally report and publish.
+name: care
+description: Install the care CLI from a verified release, run it, and optionally report and publish.
 author: toaweme
 
 branding:
@@ -10,32 +10,32 @@ inputs:
   version:
     description: >-
       Exact release tag to install, e.g. v0.1.0. Defaults to the ref the action
-      itself was pinned to (uses: toaweme/mend@v0.1.0 installs mend v0.1.0), so
+      itself was pinned to (uses: toaweme/care@v0.1.0 installs care v0.1.0), so
       the tag is the single source of truth. Pass this explicitly only when the
       action is pinned to a commit SHA or branch.
     required: false
     default: ""
   args:
     description: >-
-      Optional. Run "mend <args>" after install. The value is split on spaces into
+      Optional. Run "care <args>" after install. The value is split on spaces into
       separate arguments, so "get lint --force" passes three. Empty by default, in
-      which case the action only installs mend for you to invoke in later steps.
+      which case the action only installs care for you to invoke in later steps.
       For the report flow use output/strict/publish-url instead.
     required: false
     default: ""
   output:
     description: >-
-      Write the JSON report to this file path, the same as mend's own --output flag
-      (runs "mend status --json --pretty --output <path>"). Use a "<name>.mend.json"
-      name (e.g. report.mend.json, the default when strict or publish-url is set) -
-      the .mend.json suffix is the convention mend reports use. A failing check still
+      Write the JSON report to this file path, the same as care's own --output flag
+      (runs "care status --json --pretty --output <path>"). Use a "<name>.care.json"
+      name (e.g. report.care.json, the default when strict or publish-url is set) -
+      the .care.json suffix is the convention care reports use. A failing check still
       writes the report rather than failing the step. To gate the workflow on failing
       checks while keeping the report, set strict.
     required: false
     default: ""
   strict:
     description: >-
-      true fails the workflow when any mend check fails (after the report has been
+      true fails the workflow when any care check fails (after the report has been
       written, uploaded, and published, so the failure report is still kept). false
       (the default) reports without failing the job. Use true to gate a repo on
       quality, false to only observe.
@@ -43,21 +43,21 @@ inputs:
     default: "false"
   publish-url:
     description: >-
-      Full URL to POST the JSON report to, defaulting to mend's hosted dashboard at
-      https://code.toawe.me/ingest?kind=mend. A self-hosted codeviewer uses the same
-      path on its own host, https://YOUR-HOST/ingest?kind=mend. Override it for your
+      Full URL to POST the JSON report to, defaulting to care's hosted dashboard at
+      https://code.toawe.me/ingest?kind=care. A self-hosted codeviewer uses the same
+      path on its own host, https://YOUR-HOST/ingest?kind=care. Override it for your
       own engine, or set it empty to disable publishing. The action POSTs the report
       JSON as the body with an Authorization Bearer GitHub OIDC token whose audience
       is the URL origin (scheme and host), so it needs "permissions: id-token: write"
       on the job. Without that permission publishing is skipped with a warning. Only
       runs when a report exists (set output, strict, or upload).
     required: false
-    default: "https://code.toawe.me/ingest?kind=mend"
+    default: "https://code.toawe.me/ingest?kind=care"
   upload:
     description: >-
       Upload the report as a workflow artifact, named after the output file (e.g.
-      report.mend.json), so it can be downloaded from a finished run (including a
-      failing one) without re-running mend. Default false. The report always stays
+      report.care.json), so it can be downloaded from a finished run (including a
+      failing one) without re-running care. Default false. The report always stays
       in the workspace and is exposed via the report-path output regardless.
     required: false
     default: "false"
@@ -82,21 +82,21 @@ runs:
       # v4.1.2 (https://github.com/sigstore/cosign-installer/releases/tag/v4.1.2)
       uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
 
-    - name: Install mend
+    - name: Install care
       shell: bash
       env:
-        MEND_VERSION: ${{ inputs.version }}
-        MEND_ACTION_REF: ${{ github.action_ref }}
-        MEND_VERIFY: ${{ inputs.verify }}
+        CARE_VERSION: ${{ inputs.version }}
+        CARE_ACTION_REF: ${{ github.action_ref }}
+        CARE_VERIFY: ${{ inputs.verify }}
       run: |
         set -euo pipefail
 
         # the tag drives everything: explicit input wins, else the ref the action
         # was pinned to (GITHUB_ACTION_REF). github.action_ref is passed in env so
         # it survives the action running from its own checkout.
-        ref="${MEND_VERSION:-$MEND_ACTION_REF}"
+        ref="${CARE_VERSION:-$CARE_ACTION_REF}"
         if [ -z "$ref" ]; then
-          echo "::error::could not determine mend version: pass 'version' or pin the action to a tag" >&2
+          echo "::error::could not determine care version: pass 'version' or pin the action to a tag" >&2
           exit 1
         fi
         # goreleaser tags carry a leading v in the URL path but strip it in the
@@ -116,10 +116,10 @@ runs:
           *) echo "::error::unsupported runner arch: $RUNNER_ARCH" >&2; exit 1 ;;
         esac
 
-        ext=tar.gz; bin=mend
-        if [ "$os" = "windows" ]; then ext=zip; bin=mend.exe; fi
-        asset="mend_${version}_${os}_${arch}.${ext}"
-        base="https://github.com/toaweme/mend/releases/download/${tag}"
+        ext=tar.gz; bin=care
+        if [ "$os" = "windows" ]; then ext=zip; bin=care.exe; fi
+        asset="care_${version}_${os}_${arch}.${ext}"
+        base="https://github.com/toaweme/care/releases/download/${tag}"
 
         work="$(mktemp -d)"
         cd "$work"
@@ -128,7 +128,7 @@ runs:
         curl -fsSL -o "$asset" "${base}/${asset}"
         curl -fsSL -o checksums.txt "${base}/checksums.txt"
 
-        if [ "$MEND_VERIFY" = "true" ]; then
+        if [ "$CARE_VERIFY" = "true" ]; then
           curl -fsSL -o checksums.txt.sigstore.json "${base}/checksums.txt.sigstore.json"
           echo "verifying cosign signature on checksums.txt"
           # the release workflow signs keyless via GitHub OIDC; the cert SAN is the
@@ -136,7 +136,7 @@ runs:
           # one rule covers every tag.
           cosign verify-blob \
             --bundle checksums.txt.sigstore.json \
-            --certificate-identity-regexp "^https://github\.com/toaweme/mend/\.github/workflows/release\.yml@refs/tags/" \
+            --certificate-identity-regexp "^https://github\.com/toaweme/care/\.github/workflows/release\.yml@refs/tags/" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             checksums.txt
         else
@@ -162,7 +162,7 @@ runs:
         # bsdtar (macOS, Windows) and GNU tar both extract their respective format;
         # zip only ships for windows, where tar is bsdtar and handles it.
         tar -xf "$asset"
-        install_dir="${RUNNER_TEMP}/mend-bin"
+        install_dir="${RUNNER_TEMP}/care-bin"
         mkdir -p "$install_dir"
         mv "$bin" "$install_dir/"
         chmod +x "$install_dir/$bin" || true
@@ -172,14 +172,14 @@ runs:
         # in install_dir is kept, on PATH for the rest of the job.
         cd /
         rm -rf "$work"
-        echo "installed mend ${tag} to ${install_dir}"
+        echo "installed care ${tag} to ${install_dir}"
 
-    - name: Run mend
+    - name: Run care
       if: inputs.args != ''
       shell: bash
       env:
-        MEND_ARGS: ${{ inputs.args }}
-      run: mend $MEND_ARGS
+        CARE_ARGS: ${{ inputs.args }}
+      run: care $CARE_ARGS
 
     - name: Generate report
       id: report
@@ -188,20 +188,20 @@ runs:
       if: inputs.output != '' || inputs.strict == 'true' || inputs.upload == 'true'
       shell: bash
       env:
-        MEND_OUTPUT: ${{ inputs.output }}
+        CARE_OUTPUT: ${{ inputs.output }}
       run: |
         set -uo pipefail
         # report lives in the workspace so it survives install cleanup and is
         # reachable by later steps. strict/publish-url imply the default path.
-        report="${MEND_OUTPUT:-report.mend.json}"
+        report="${CARE_OUTPUT:-report.care.json}"
         echo "report-path=$report" >> "$GITHUB_OUTPUT"
         # the artifact is named after the report file, so output is the only place
         # the name is set (artifact names can't contain the path separator).
         echo "artifact-name=$(basename "$report")" >> "$GITHUB_OUTPUT"
-        # capture mend's exit code rather than failing now, so the report still
+        # capture care's exit code rather than failing now, so the report still
         # uploads and publishes. the gate step below re-raises it when asked.
         code=0
-        mend status --json --pretty --output "$report" || code=$?
+        care status --json --pretty --output "$report" || code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
 
     - name: Upload report artifact
@@ -219,12 +219,12 @@ runs:
       if: always() && inputs.publish-url != ''
       shell: bash
       env:
-        MEND_PUBLISH_URL: ${{ inputs.publish-url }}
-        MEND_REPORT_PATH: ${{ steps.report.outputs.report-path }}
+        CARE_PUBLISH_URL: ${{ inputs.publish-url }}
+        CARE_REPORT_PATH: ${{ steps.report.outputs.report-path }}
       run: |
         set -euo pipefail
-        url="$MEND_PUBLISH_URL"
-        report="$MEND_REPORT_PATH"
+        url="$CARE_PUBLISH_URL"
+        report="$CARE_REPORT_PATH"
         if [ -z "$url" ] || [ ! -s "$report" ]; then
           echo "No report to publish"
           exit 0
@@ -242,18 +242,18 @@ runs:
         curl -fsS -X POST "$url" \
           -H "Authorization: Bearer $token" \
           --data-binary @"$report"
-        printf '\nPublished mend report to %s\n' "$url"
+        printf '\nPublished care report to %s\n' "$url"
 
     - name: Gate on failing checks
       # runs last so the report has already been uploaded and published; re-raises
-      # the mend exit code captured during report generation.
+      # the care exit code captured during report generation.
       if: always() && inputs.strict == 'true'
       shell: bash
       env:
-        MEND_EXIT: ${{ steps.report.outputs.exit-code }}
+        CARE_EXIT: ${{ steps.report.outputs.exit-code }}
       run: |
-        code="${MEND_EXIT:-0}"
+        code="${CARE_EXIT:-0}"
         if [ "$code" != "0" ]; then
-          echo "::error::mend reported failing checks (exit ${code})"
+          echo "::error::care reported failing checks (exit ${code})"
           exit "$code"
         fi

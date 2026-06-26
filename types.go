@@ -1,4 +1,4 @@
-package mend
+package care
 
 import (
 	"context"
@@ -27,7 +27,7 @@ const (
 	InstallerBuiltin Installer = "builtin"    // ships with the toolchain (e.g. go)
 )
 
-// Feature names a language-agnostic capability mend checks: the wire `feature` and
+// Feature names a language-agnostic capability care checks: the wire `feature` and
 // the terminal header. A result's feature comes from the Ecosystem slot it was
 // selected from, never from the check itself.
 const (

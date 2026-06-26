@@ -1,13 +1,13 @@
 // Package rating turns a run's per-check outcomes into a single repo health grade:
 // a 0-100 score, a letter rating, and a coarse verdict. It is deliberately
-// decoupled from the rest of mend (it knows nothing of Output/Report types), so any
+// decoupled from the rest of care (it knows nothing of Output/Report types), so any
 // ecosystem can grade the same way by handing it a flat list of Checks.
 package rating
 
 import "math"
 
 // Outcome is one check's result, mirrored here so the rating engine carries no
-// dependency on the core mend types.
+// dependency on the core care types.
 type Outcome int
 
 // The outcomes a single check can report, ordered best to worst.

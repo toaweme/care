@@ -1,4 +1,4 @@
-// Command mend reports repository health and scaffolds config files for the
+// Command care reports repository health and scaffolds config files for the
 // current repo's ecosystem.
 package main
 
@@ -11,17 +11,17 @@ import (
 	"github.com/toaweme/cli"
 	"github.com/toaweme/http"
 
-	"github.com/toaweme/mend/cmd/mend/output"
-	"github.com/toaweme/mend/eco/shared/sync"
+	"github.com/toaweme/care/cmd/care/output"
+	"github.com/toaweme/care/eco/shared/sync"
 )
 
-// GetConfig drives the generic `mend get` file sync. With no --from it falls
+// GetConfig drives the generic `care get` file sync. With no --from it falls
 // back to listing the scaffolding subcommands.
 type GetConfig struct {
-	From  string `arg:"from" short:"f" env:"MEND_GET_FROM" help:"Source to sync from: a local path, a bundled template name, a github/gist url, or the owner/repo/path shorthand"`
-	Out   string `arg:"out" short:"o" env:"MEND_GET_OUT" help:"Destination path to write, relative to cwd"`
+	From  string `arg:"from" short:"f" env:"CARE_GET_FROM" help:"Source to sync from: a local path, a bundled template name, a github/gist url, or the owner/repo/path shorthand"`
+	Out   string `arg:"out" short:"o" env:"CARE_GET_OUT" help:"Destination path to write, relative to cwd"`
 	Token string `arg:"token" short:"t" env:"GITHUB_TOKEN" help:"GitHub token for private sources; defaults to the GITHUB_TOKEN env"`
-	Force bool   `arg:"force" env:"MEND_GET_FORCE" default:"false" help:"Overwrite an existing destination file"`
+	Force bool   `arg:"force" env:"CARE_GET_FORCE" default:"false" help:"Overwrite an existing destination file"`
 }
 
 // GetCommand is the parent of the repo-scaffolding subcommands (lint, ...) and

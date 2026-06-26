@@ -1,4 +1,4 @@
-package mend
+package care
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// This file is the wire contract and the living documentation of what mend checks:
+// This file is the wire contract and the living documentation of what care checks:
 // one payload type per feature, language-agnostic, filled by an ecosystem's
 // features. Each implements Report, so it is both the JSON data and the source of
 // its own terminal presentation.

@@ -2,8 +2,8 @@
 package output
 
 import (
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/internal/rating"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/internal/rating"
 )
 
 // Health is the run's headline: a graded score + letter rating on top of the raw
@@ -53,19 +53,19 @@ type TestMetric struct {
 // buildHealth rolls the run-phase outputs into the health headline: the status
 // tally, the rating-engine grade, the slowest check, and the promoted metrics.
 // durationMs is the run's wall-clock, measured by the caller around the runner.
-func buildHealth(runs []mend.Rendered, durationMs int64, grading rating.Config) Health {
+func buildHealth(runs []care.Rendered, durationMs int64, grading rating.Config) Health {
 	h := Health{DurationMs: durationMs}
 
 	checks := make([]rating.Check, 0, len(runs))
 	for _, o := range runs {
 		switch o.Status() {
-		case mend.StatusOK:
+		case care.StatusOK:
 			h.OK++
-		case mend.StatusWarn:
+		case care.StatusWarn:
 			h.Warn++
-		case mend.StatusFail:
+		case care.StatusFail:
 			h.Fail++
-		case mend.StatusSkip:
+		case care.StatusSkip:
 			h.Skip++
 		}
 		checks = append(checks, rating.Check{Feature: o.Feature(), Outcome: outcome(o.Status())})
@@ -81,38 +81,38 @@ func buildHealth(runs []mend.Rendered, durationMs int64, grading rating.Config) 
 }
 
 // accrueMetrics lifts the headline numbers off one check's typed payload.
-func (h *Health) accrueMetrics(o mend.Rendered) {
+func (h *Health) accrueMetrics(o care.Rendered) {
 	switch d := o.Data().(type) {
-	case mend.TestReport:
+	case care.TestReport:
 		c := d.Cases
 		h.Metrics.Tests = &TestMetric{Passed: c.Passed, Failed: c.Failed, Total: c.Passed + c.Failed + c.Skipped}
 		if d.WithCoverage {
 			cov := d.Total
 			h.Metrics.Coverage = &cov
 		}
-	case mend.SecretReport:
+	case care.SecretReport:
 		h.Metrics.Secrets += len(d.Findings)
-	case mend.VulnReport:
+	case care.VulnReport:
 		// only code/dependency vulns count toward the headline; go-toolchain findings
 		// are informational and tracked on the check payload, not the health metric.
 		h.Metrics.Vulns += d.Actionable()
-	case mend.BuildReport:
+	case care.BuildReport:
 		h.Metrics.Issues += len(d.Errors)
-	case mend.QualityReport:
+	case care.QualityReport:
 		h.Metrics.Issues += len(d.Issues)
-	case mend.DepsReport:
+	case care.DepsReport:
 		h.Metrics.Issues += len(d.Issues)
 	}
 }
 
 // outcome maps a core Status onto the rating engine's Outcome.
-func outcome(s mend.Status) rating.Outcome {
+func outcome(s care.Status) rating.Outcome {
 	switch s {
-	case mend.StatusOK:
+	case care.StatusOK:
 		return rating.Pass
-	case mend.StatusWarn:
+	case care.StatusWarn:
 		return rating.Warn
-	case mend.StatusFail:
+	case care.StatusFail:
 		return rating.Fail
 	default:
 		return rating.Skip

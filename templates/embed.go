@@ -1,6 +1,6 @@
 // Package templates ships the canonical toaweme config files (golangci, taskfile,
 // gitignore, GitHub quality + release workflows, goreleaser, licenses) as an
-// embedded filesystem so the `mend setup` subcommands can write them into target
+// embedded filesystem so the `care setup` subcommands can write them into target
 // repos without any network dependency. Workflow templates live under
 // `.github/workflows/`; the repo kind is encoded in the filename (`*.library.yml`
 // / `*.binary.yml`). The setup file matrix maps each source to its destination

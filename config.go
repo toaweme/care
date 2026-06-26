@@ -1,15 +1,15 @@
-// Package mend is the language-agnostic core: it models ecosystems, features, and
+// Package care is the language-agnostic core: it models ecosystems, features, and
 // checks, runs them against a repo, and renders the unified typed results.
-package mend
+package care
 
 // Defaults returns a Config with sensible defaults applied.
 func Defaults() Config {
 	return Config{AutoInstall: true}
 }
 
-// Config is the global mend configuration loaded from mend.yml. The yaml tags
-// carry omitempty so `mend init` can marshal a Config back into a clean,
-// minimal mend.yml without emitting every zero-valued field.
+// Config is the global care configuration loaded from care.yml. The yaml tags
+// carry omitempty so `care init` can marshal a Config back into a clean,
+// minimal care.yml without emitting every zero-valued field.
 type Config struct {
 	// AutoInstall provisions missing tool binaries when running commands. Defaults to true.
 	AutoInstall bool `yaml:"auto_install" default:"true"`

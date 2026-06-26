@@ -1,7 +1,7 @@
 // Package golang holds the Go ecosystem's checks, one per file
-// (check_<name>.go). Each pairs a mend role implementation with the typed
-// mend.Report it produces and the parser for its tool's output. Constructors take
-// their injected tools; main registers each into the mend.Ecosystem. The engines
+// (check_<name>.go). Each pairs a care role implementation with the typed
+// care.Report it produces and the parser for its tool's output. Constructors take
+// their injected tools; main registers each into the care.Ecosystem. The engines
 // they call live in subpackages: tests, gomod, inspect.
 package golang
 

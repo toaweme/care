@@ -1,7 +1,7 @@
-package mend
+package care
 
-// Ecosystem is the registry of every feature mend checks, one typed slot per
-// feature. The struct is the living documentation of mend's capabilities: each
+// Ecosystem is the registry of every feature care checks, one typed slot per
+// feature. The struct is the living documentation of care's capabilities: each
 // field names a language-agnostic feature and holds the active ecosystem's check
 // implementation (e.g. golang.NewGoMod() for Dependencies). A second ecosystem
 // (Node) fills the same slots with its own checks. An empty slot is a feature

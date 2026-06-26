@@ -3,7 +3,7 @@ package golang
 import (
 	"testing"
 
-	"github.com/toaweme/mend"
+	"github.com/toaweme/care"
 )
 
 // govulncheck emits a stream of newline-delimited json objects. these fixtures
@@ -20,11 +20,11 @@ const (
 {"finding":{"osv":"GO-2024-0003","trace":[{"module":"github.com/foo/baz","version":"v0.1.0","package":"github.com/foo/baz"}]}}`
 
 	osvOwnCode = `{"osv":{"id":"GO-2024-0004","summary":"a bug in our own module"}}
-{"finding":{"osv":"GO-2024-0004","fixed_version":"v2.0.0","trace":[{"module":"github.com/toaweme/mend","version":"v1.0.0","package":"github.com/toaweme/mend/eco","function":"Boom"}]}}`
+{"finding":{"osv":"GO-2024-0004","fixed_version":"v2.0.0","trace":[{"module":"github.com/toaweme/care","version":"v1.0.0","package":"github.com/toaweme/care/eco","function":"Boom"}]}}`
 )
 
 func Test_ParseGovulncheckJSON(t *testing.T) {
-	const mod = "github.com/toaweme/mend"
+	const mod = "github.com/toaweme/care"
 	type want struct {
 		id  string
 		cat string
@@ -35,14 +35,14 @@ func Test_ParseGovulncheckJSON(t *testing.T) {
 		want []want
 	}{
 		{name: "empty stream", out: "", want: nil},
-		{name: "dependency finding tagged deps", out: osvDep, want: []want{{"GO-2024-0001", mend.VulnDeps}}},
-		{name: "stdlib finding tagged runtime", out: osvStdlib, want: []want{{"GO-2024-0002", mend.VulnRuntime}}},
+		{name: "dependency finding tagged deps", out: osvDep, want: []want{{"GO-2024-0001", care.VulnDeps}}},
+		{name: "stdlib finding tagged runtime", out: osvStdlib, want: []want{{"GO-2024-0002", care.VulnRuntime}}},
 		{name: "imports-only finding dropped", out: osvImportsOnly, want: nil},
-		{name: "own-module finding tagged code", out: osvOwnCode, want: []want{{"GO-2024-0004", mend.VulnCode}}},
+		{name: "own-module finding tagged code", out: osvOwnCode, want: []want{{"GO-2024-0004", care.VulnCode}}},
 		{
 			name: "mixed: deps + runtime kept, imports-only dropped",
 			out:  osvDep + "\n" + osvStdlib + "\n" + osvImportsOnly,
-			want: []want{{"GO-2024-0001", mend.VulnDeps}, {"GO-2024-0002", mend.VulnRuntime}},
+			want: []want{{"GO-2024-0001", care.VulnDeps}, {"GO-2024-0002", care.VulnRuntime}},
 		},
 	}
 	for _, tt := range tests {
@@ -64,11 +64,11 @@ func Test_ParseGovulncheckJSON(t *testing.T) {
 }
 
 func Test_VulnReport_ActionableAndRuntime(t *testing.T) {
-	r := mend.VulnReport{Findings: []mend.VulnFinding{
-		{ID: "a", Category: mend.VulnDeps},
-		{ID: "b", Category: mend.VulnRuntime},
-		{ID: "c", Category: mend.VulnCode},
-		{ID: "d", Category: mend.VulnRuntime},
+	r := care.VulnReport{Findings: []care.VulnFinding{
+		{ID: "a", Category: care.VulnDeps},
+		{ID: "b", Category: care.VulnRuntime},
+		{ID: "c", Category: care.VulnCode},
+		{ID: "d", Category: care.VulnRuntime},
 	}}
 	if got := r.Actionable(); got != 2 {
 		t.Errorf("Actionable() = %d, want 2", got)

@@ -1,15 +1,15 @@
 version: 2
 
-project_name: mend
+project_name: care
 
 before:
   hooks:
     - go mod download
 
 builds:
-  - id: mend
-    main: ./cmd/mend
-    binary: mend
+  - id: care
+    main: ./cmd/care
+    binary: care
     env:
       - CGO_ENABLED=0
     goos:
@@ -27,7 +27,7 @@ builds:
       - -s -w -X main.version={{ .Version }}
 
 archives:
-  - ids: [mend]
+  - ids: [care]
     formats: [tar.gz]
     format_overrides:
       - goos: windows
@@ -59,9 +59,9 @@ signs:
     output: true
 
 brews:
-  - name: mend
+  - name: care
     directory: Formula
-    homepage: "https://github.com/toaweme/mend"
+    homepage: "https://github.com/toaweme/care"
     description: "Repository health and quality checker"
     license: "MIT"
     # one shared tap holds a Formula/<project>.rb per project, so every
@@ -73,7 +73,7 @@ brews:
     # don't push a formula for pre-release tags (e.g. v1.0.0-rc1).
     skip_upload: auto
     test: |
-      system "#{bin}/mend", "--help"
+      system "#{bin}/care", "--help"
 
 changelog:
   sort: asc
@@ -115,11 +115,11 @@ release:
 
     ```sh
     # go
-    go install github.com/toaweme/mend/cmd/mend@{{ .Tag }}
+    go install github.com/toaweme/care/cmd/care@{{ .Tag }}
 
     # homebrew
-    brew install toaweme/tap/mend
+    brew install toaweme/tap/care
 
     # binary (linux x64; swap os/arch as needed)
-    wget -qO- https://github.com/toaweme/mend/releases/download/{{ .Tag }}/mend_{{ .Version }}_linux_x64.tar.gz | tar xz
+    wget -qO- https://github.com/toaweme/care/releases/download/{{ .Tag }}/care_{{ .Version }}_linux_x64.tar.gz | tar xz
     ```

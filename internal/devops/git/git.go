@@ -1,5 +1,5 @@
 // Package git inspects a git repository's working-tree status, upstream sync
-// state, and identity header for mend's report.
+// state, and identity header for care's report.
 package git
 
 import (

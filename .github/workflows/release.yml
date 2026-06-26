@@ -14,7 +14,7 @@ env:
 
 jobs:
   # gate the release on correctness: a tag only ships if build, vet, tests, and
-  # lint pass on the tagged commit, independent of mend's own check logic.
+  # lint pass on the tagged commit, independent of care's own check logic.
   test:
     runs-on: ubuntu-latest
     steps:

@@ -4,14 +4,14 @@
 // eco/shared rather than in a language's tools package.
 package tools
 
-import "github.com/toaweme/mend"
+import "github.com/toaweme/care"
 
 // NewBetterleaks builds the betterleaks tool, pinned to version when non-empty.
 // betterleaks scans any repo for leaked secrets, so it is shared, not Go-specific.
-func NewBetterleaks(version string) mend.Tool {
-	return mend.NewTool(mend.ToolSpec{
+func NewBetterleaks(version string) care.Tool {
+	return care.NewTool(care.ToolSpec{
 		Name:      "betterleaks",
-		Installer: mend.InstallerBrew,
+		Installer: care.InstallerBrew,
 		Brew:      "betterleaks",
 		GoPath:    "github.com/betterleaks/betterleaks",
 		Version:   version,

@@ -3,7 +3,7 @@ package golang
 import (
 	"testing"
 
-	"github.com/toaweme/mend/eco/golang/gomod"
+	"github.com/toaweme/care/eco/golang/gomod"
 )
 
 func Test_toolchainNote(t *testing.T) {

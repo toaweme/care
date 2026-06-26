@@ -19,8 +19,8 @@ env:
   GOLANGCI_VERSION: v2.12.2
 
 jobs:
-  # the gate: raw upstream checks, no dependency on mend, so a change that breaks
-  # mend's own check logic is still caught here. Single Go version from go.mod.
+  # the gate: raw upstream checks, no dependency on care, so a change that breaks
+  # care's own check logic is still caught here. Single Go version from go.mod.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_VERSION}
           golangci-lint run
 
-  # non-gating early warning that the next Go release still builds and tests mend.
+  # non-gating early warning that the next Go release still builds and tests care.
   canary:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -57,7 +57,7 @@ jobs:
       - run: go build ./...
       - run: go test ./... -race
 
-  # informational: run mend on itself through our own action (verified install +
+  # informational: run care on itself through our own action (verified install +
   # report + publish), which also proves the action keeps working. Push-only so
   # fork PRs don't hit OIDC restrictions; reports on the latest release, not the
   # PR's code.
@@ -73,7 +73,7 @@ jobs:
       # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
-      - name: Resolve latest mend release
+      - name: Resolve latest care release
         id: rel
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,5 +82,5 @@ jobs:
       - uses: ./
         with:
           version: ${{ steps.rel.outputs.tag }}
-          output: report.mend.json
-          # publish-url defaults to the mend dashboard endpoint, so it is omitted.
+          output: report.care.json
+          # publish-url defaults to the care dashboard endpoint, so it is omitted.

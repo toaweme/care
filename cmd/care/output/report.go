@@ -11,8 +11,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/internal/rating"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/internal/rating"
 )
 
 // RenderOptions controls how a run's outputs are rendered.
@@ -30,7 +30,7 @@ type RenderOptions struct {
 // Render writes a run's outputs as JSON or a structured text report. It consumes
 // the phase-tagged Rendered stream the runner produces (install outputs then run
 // outputs); info carries the caller-resolved repo header for the JSON shape.
-func Render(outputs []mend.Rendered, info RunInfo, opts RenderOptions) error {
+func Render(outputs []care.Rendered, info RunInfo, opts RenderOptions) error {
 	if opts.JSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -43,12 +43,12 @@ func Render(outputs []mend.Rendered, info RunInfo, opts RenderOptions) error {
 	return nil
 }
 
-func renderPretty(outputs []mend.Rendered, info RunInfo, opts RenderOptions) {
+func renderPretty(outputs []care.Rendered, info RunInfo, opts RenderOptions) {
 	p := NewPretty()
 
-	var installs, runs []mend.Rendered
+	var installs, runs []care.Rendered
 	for _, o := range outputs {
-		if o.Phase() == mend.PhaseInstall {
+		if o.Phase() == care.PhaseInstall {
 			installs = append(installs, o)
 		} else {
 			runs = append(runs, o)
@@ -58,7 +58,7 @@ func renderPretty(outputs []mend.Rendered, info RunInfo, opts RenderOptions) {
 	headerTools := len(installs)
 	if opts.ExpandInstall && len(installs) > 0 {
 		p.Section("install", DimStyle.Render(plural(len(installs), "tool", "tools")))
-		width := labelWidth(installs, func(o mend.Rendered) string { return o.Tool() })
+		width := labelWidth(installs, func(o care.Rendered) string { return o.Tool() })
 		for _, o := range installs {
 			p.CheckRow(icon(o.Status()), o.Tool(), width, o.Summary(0))
 		}
@@ -208,7 +208,7 @@ func plural(n int, singular, plural string) string {
 // feature is one row labeled by its name; a composite feature's sub-checks expand
 // into its item rows. Order is stable because the runner delivers outputs sorted
 // before this re-sorts by status.
-func renderChecks(p *Pretty, checks []mend.Rendered, opts RenderOptions) {
+func renderChecks(p *Pretty, checks []care.Rendered, opts RenderOptions) {
 	width := labelWidth(checks, rowLabel)
 
 	sortByStatus(checks)
@@ -225,7 +225,7 @@ func featureLabel(feature string) string {
 
 // rowLabel is a check's display label: its humanized feature, suffixed with the
 // run-profile when it ran under a named (non-default) one, e.g. "tests (race)".
-func rowLabel(o mend.Rendered) string {
+func rowLabel(o care.Rendered) string {
 	label := featureLabel(o.Feature())
 	if p := profileLabel(o.Profile()); p != "" {
 		return label + " (" + p + ")"
@@ -235,18 +235,18 @@ func rowLabel(o mend.Rendered) string {
 
 // sortByStatus orders rows passing-first, failures last (nearest the footer),
 // stable within each status so feature order is otherwise preserved.
-func sortByStatus(outputs []mend.Rendered) {
+func sortByStatus(outputs []care.Rendered) {
 	sort.SliceStable(outputs, func(i, j int) bool {
 		return statusRank(outputs[i].Status()) < statusRank(outputs[j].Status())
 	})
 }
 
-func renderCheck(p *Pretty, o mend.Rendered, width int, opts RenderOptions) {
+func renderCheck(p *Pretty, o care.Rendered, width int, opts RenderOptions) {
 	label := rowLabel(o)
 	icn := icon(o.Status())
 	summary := o.Summary(opts.Verbosity)
 
-	if o.Status() == mend.StatusSkip {
+	if o.Status() == care.StatusSkip {
 		detail := "skipped"
 		if summary != "" {
 			detail = "skipped: " + summary
@@ -257,11 +257,11 @@ func renderCheck(p *Pretty, o mend.Rendered, width int, opts RenderOptions) {
 	// the summary line always prints; expanded item rows follow beneath it. Passing
 	// checks stay collapsed (summary only) at default verbosity and expand at -v.
 	p.CheckRow(icn, label, width, summary)
-	if o.Status() == mend.StatusOK && opts.Verbosity == 0 {
+	if o.Status() == care.StatusOK && opts.Verbosity == 0 {
 		return
 	}
 	rows := o.Rows(opts.Verbosity)
-	if o.Status() == mend.StatusFail && o.Err() != nil && opts.Verbosity > 1 {
+	if o.Status() == care.StatusFail && o.Err() != nil && opts.Verbosity > 1 {
 		rows = append(rows, []string{"err: " + o.Err().Error()})
 	}
 	p.ItemRows(rows)
@@ -269,15 +269,15 @@ func renderCheck(p *Pretty, o mend.Rendered, width int, opts RenderOptions) {
 
 // statusRank orders check rows for display: passing first, then skipped, warnings,
 // and failures last (closest to the footer summary).
-func statusRank(s mend.Status) int {
+func statusRank(s care.Status) int {
 	switch s {
-	case mend.StatusOK:
+	case care.StatusOK:
 		return 0
-	case mend.StatusSkip:
+	case care.StatusSkip:
 		return 1
-	case mend.StatusWarn:
+	case care.StatusWarn:
 		return 2
-	case mend.StatusFail:
+	case care.StatusFail:
 		return 3
 	default:
 		return 4
@@ -285,13 +285,13 @@ func statusRank(s mend.Status) int {
 }
 
 // icon returns the styled status glyph for a row.
-func icon(s mend.Status) string {
+func icon(s care.Status) string {
 	switch s {
-	case mend.StatusOK:
+	case care.StatusOK:
 		return OKStyle.Render("✓")
-	case mend.StatusWarn:
+	case care.StatusWarn:
 		return WarnStyle.Render("!")
-	case mend.StatusFail:
+	case care.StatusFail:
 		return ErrorStyle.Render("✗")
 	default:
 		return DimStyle.Render("○")
@@ -299,7 +299,7 @@ func icon(s mend.Status) string {
 }
 
 // labelWidth returns the longest label among outputs, for column alignment.
-func labelWidth(outputs []mend.Rendered, label func(mend.Rendered) string) int {
+func labelWidth(outputs []care.Rendered, label func(care.Rendered) string) int {
 	w := 0
 	for _, o := range outputs {
 		if n := len(label(o)); n > w {
@@ -319,10 +319,10 @@ func shortenRepo(p string) string {
 }
 
 // Failures returns the number of failing outputs (commands use it for exit code).
-func Failures(outputs []mend.Rendered) int {
+func Failures(outputs []care.Rendered) int {
 	var n int
 	for _, o := range outputs {
-		if o.Status() == mend.StatusFail {
+		if o.Status() == care.StatusFail {
 			n++
 		}
 	}

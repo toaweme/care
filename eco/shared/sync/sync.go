@@ -12,7 +12,7 @@ import (
 // Engine syncs files into the working tree from a source spec. It owns the
 // ordered resolution chain - local filesystem, then embedded templates, then the
 // remote host providers - and the writing rules. It is the agnostic core both the
-// generic `mend setup` and the named presets call.
+// generic `care setup` and the named presets call.
 type Engine struct {
 	fetcher   Fetcher
 	providers []Provider

@@ -1,4 +1,4 @@
-# mend default golangci-lint config (golangci-lint v2, validated against v2.12.x).
+# care default golangci-lint config (golangci-lint v2, validated against v2.12.x).
 # Tuned for libraries/services that ship as part of the toaweme/awee-ai ecosystem.
 # Philosophy: a curated, high-signal set - every linter earns its place, noisy
 # style linters are deliberately left off. Override per-repo only with a reason.
@@ -249,7 +249,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - __IMPORT_SORT_PREFIXES__ # substituted by `mend sync` with the repo's local import roots
+        - __IMPORT_SORT_PREFIXES__ # substituted by `care sync` with the repo's local import roots
 
 issues:
   max-issues-per-linter: 0         # 0 = no cap; report everything (default caps hide issues)

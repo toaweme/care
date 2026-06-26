@@ -7,63 +7,63 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/eco/golang/gomod"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/eco/golang/gomod"
 )
 
 type goModCheck struct {
-	mend.BaseCheck
-	tool mend.Tool
+	care.BaseCheck
+	tool care.Tool
 }
 
-var _ mend.Dependencies = (*goModCheck)(nil)
+var _ care.Dependencies = (*goModCheck)(nil)
 
 // NewGoMod is the Dependencies feature for Go: it reports whether `go mod tidy`
 // would change go.mod/go.sum and any replace directives present, as one rolled-up
 // result. In fix mode (DepsRunOptions.Fix) it applies `go mod tidy` for real instead
 // of running the non-mutating tidy check. (The go/toolchain directive minimality
 // check is a separate feature, NewRuntime.)
-func NewGoMod(tool mend.Tool) mend.Dependencies {
-	return &goModCheck{BaseCheck: mend.NewBaseCheck("go-mod", tool), tool: tool}
+func NewGoMod(tool care.Tool) care.Dependencies {
+	return &goModCheck{BaseCheck: care.NewBaseCheck("go-mod", tool), tool: tool}
 }
 
 func (f *goModCheck) Applies(dir string) bool { return hasGoMod(dir) }
 
-func (f *goModCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) mend.Output[mend.DepsReport] {
-	var issues []mend.DepIssue
+func (f *goModCheck) Run(ctx context.Context, dir string, opts care.RunOptions) care.Output[care.DepsReport] {
+	var issues []care.DepIssue
 
 	if opts.Dependencies.Fix {
 		if out, err := f.tool.Exec(ctx, dir, "mod", "tidy"); err != nil {
-			return mend.Errored[mend.DepsReport]("tool failed", fmt.Errorf("failed to run go mod tidy: %w\n%s", err, trimOutput(out)))
+			return care.Errored[care.DepsReport]("tool failed", fmt.Errorf("failed to run go mod tidy: %w\n%s", err, trimOutput(out)))
 		}
 	} else {
 		diff, err := f.checkTidy(ctx, dir)
 		if err != nil {
-			return mend.Errored[mend.DepsReport]("tool failed", err)
+			return care.Errored[care.DepsReport]("tool failed", err)
 		}
 		if len(diff) > 0 {
-			issues = append(issues, mend.DepIssue{Check: "tidy", Detail: "go.mod/go.sum not tidy"})
+			issues = append(issues, care.DepIssue{Check: "tidy", Detail: "go.mod/go.sum not tidy"})
 			for _, d := range diff {
-				issues = append(issues, mend.DepIssue{Check: "tidy", Detail: d})
+				issues = append(issues, care.DepIssue{Check: "tidy", Detail: d})
 			}
 		}
 	}
 
 	replaces, err := gomod.ReplaceDirectives(dir)
 	if err != nil {
-		return mend.Errored[mend.DepsReport]("read failed", fmt.Errorf("failed to read replace directives: %w", err))
+		return care.Errored[care.DepsReport]("read failed", fmt.Errorf("failed to read replace directives: %w", err))
 	}
 	for _, d := range replaces {
-		issues = append(issues, mend.DepIssue{Check: "replace", Detail: d})
+		issues = append(issues, care.DepIssue{Check: "replace", Detail: d})
 	}
 
 	// go mod verify checks the module cache against go.sum offline; anything but the
 	// "all modules verified" line means a dependency was tampered with.
 	if out, err := f.tool.Exec(ctx, dir, "mod", "verify"); err != nil || !strings.Contains(string(out), "all modules verified") {
-		issues = append(issues, mend.DepIssue{Check: "verify", Detail: firstLine(out)})
+		issues = append(issues, care.DepIssue{Check: "verify", Detail: firstLine(out)})
 	}
 
-	report := mend.DepsReport{Issues: issues}
+	report := care.DepsReport{Issues: issues}
 	// what the graph demands: the runtime-version floor the dependencies force, read
 	// from the local module cache (never downloaded), plus the per-dep table.
 	if floor, err := gomod.ReadDepFloor(dir, goModCache(ctx, f.tool, dir)); err == nil {
@@ -73,9 +73,9 @@ func (f *goModCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) 
 	}
 
 	if len(issues) > 0 {
-		return mend.Fail(report)
+		return care.Fail(report)
 	}
-	return mend.Pass(report)
+	return care.Pass(report)
 }
 
 // checkTidy returns the changes `go mod tidy` would make to go.mod/go.sum as

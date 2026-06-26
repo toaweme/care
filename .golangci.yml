@@ -1,4 +1,4 @@
-# mend default golangci-lint config (golangci-lint v2, validated against v2.12.x).
+# care default golangci-lint config (golangci-lint v2, validated against v2.12.x).
 # Tuned for libraries/services that ship as part of the toaweme/awee-ai ecosystem.
 # Philosophy: a curated, high-signal set - every linter earns its place, noisy
 # style linters are deliberately left off. Override per-repo only with a reason.

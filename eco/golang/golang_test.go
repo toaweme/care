@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/toaweme/mend"
+	"github.com/toaweme/care"
 )
 
 func Test_HasGolangciConfig(t *testing.T) {
@@ -50,7 +50,7 @@ func Test_Quality_ConfigDrivesEngine(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "go.mod"))
 
-	quality := NewQuality(mend.Tool{}, mend.Tool{}, mend.Tool{})
+	quality := NewQuality(care.Tool{}, care.Tool{}, care.Tool{})
 	if !quality.Applies(root) {
 		t.Fatalf("quality should apply on any Go module")
 	}

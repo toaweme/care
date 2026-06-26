@@ -1,4 +1,4 @@
-# mend configuration. Loaded from ~/.mend/mend.yml (global) then ./mend.yml
+# care configuration. Loaded from ~/.care/care.yml (global) then ./care.yml
 # (project); the project file wins field by field. Every block is optional;
 # omit one to keep the built-in defaults.
 
@@ -29,7 +29,7 @@ checks:
     options:
       db: ""             # GOVULNDB override (e.g. a local mirror); empty uses the default
 
-# Override the managed-file matrix written into repos. Left unset, mend seeds it
+# Override the managed-file matrix written into repos. Left unset, care seeds it
 # from the Go ecosystem defaults. Lists are by repo kind (common applies to all;
 # binary/library add on top). Each entry: src, dst, strategy
 # (overwrite | merge | create_only | taskfile).

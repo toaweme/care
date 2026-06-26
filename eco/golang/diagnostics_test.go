@@ -13,7 +13,7 @@ func Test_ParseDiagnostics(t *testing.T) {
 	}{
 		{
 			name: "go build error with continuation lines",
-			in: "# github.com/toaweme/mend\n" +
+			in: "# github.com/toaweme/care\n" +
 				"./broken.go:3:21: not enough return values\n" +
 				"\thave ()\n" +
 				"\twant (int)\n",

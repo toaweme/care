@@ -16,7 +16,7 @@ import "errors"
 
 // ErrNoAPI is returned by LoadHistory when $GOROOT/api is unavailable. Callers
 // should treat it as "skip this check", not as a failure: the data is a Go
-// installation artifact mend neither ships nor can synthesize.
+// installation artifact care neither ships nor can synthesize.
 var ErrNoAPI = errors.New("$GOROOT/api not found")
 
 // Result is the computed minimum for a module: the highest minor version any

@@ -1,4 +1,4 @@
-package mend
+package care
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/toaweme/mend/internal/devops/install"
+	"github.com/toaweme/care/internal/devops/install"
 )
 
 // runner installs the tools the tasks need, then runs the tasks against a repo

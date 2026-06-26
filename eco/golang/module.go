@@ -1,6 +1,6 @@
 package golang
 
-import "github.com/toaweme/mend/eco/golang/inspect"
+import "github.com/toaweme/care/eco/golang/inspect"
 
 // ModulePath returns the repo's module path for the report header, or "" when it
 // cannot be determined (not a Go module, unreadable go.mod). It fills the

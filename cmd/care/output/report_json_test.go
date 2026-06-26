@@ -4,25 +4,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/internal/rating"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/internal/rating"
 )
 
 // Test_BuildJSON_SingleRepo checks the single-repo wire shape: a flat check list
 // under one header (author + created), each check keyed by its type/feature, install
 // outputs lifted into Tools, and a check's typed payload carried as Data.
 func Test_BuildJSON_SingleRepo(t *testing.T) {
-	outputs := []mend.Rendered{
-		mend.InstallResult("golangci-lint", mend.StatusOK, "present"),
-		mend.Result(mend.FeatureLint, "golangci-lint", "/src/repoA", mend.StatusFail,
-			mend.QualityReport{Issues: []mend.QualityIssue{{File: "main.go", Line: 3, Col: 1, Message: "ineffassign", Linter: "ineffassign"}}}),
-		mend.Result(mend.FeatureDependencies, "go-mod", "/src/repoA", mend.StatusOK, mend.DepsReport{}),
+	outputs := []care.Rendered{
+		care.InstallResult("golangci-lint", care.StatusOK, "present"),
+		care.Result(care.FeatureLint, "golangci-lint", "/src/repoA", care.StatusFail,
+			care.QualityReport{Issues: []care.QualityIssue{{File: "main.go", Line: 3, Col: 1, Message: "ineffassign", Linter: "ineffassign"}}}),
+		care.Result(care.FeatureDependencies, "go-mod", "/src/repoA", care.StatusOK, care.DepsReport{}),
 	}
 
 	created := time.Date(2026, 6, 9, 14, 23, 1, 0, time.UTC)
 	rep := buildJSON(outputs, RunInfo{Created: created, Repo: "/src/repoA"}, rating.Default())
-	if rep.Author != "mend" || rep.Created != "2026-06-09T14:23:01Z" {
-		t.Fatalf("header = author %q created %q, want mend / RFC3339", rep.Author, rep.Created)
+	if rep.Author != "care" || rep.Created != "2026-06-09T14:23:01Z" {
+		t.Fatalf("header = author %q created %q, want care / RFC3339", rep.Author, rep.Created)
 	}
 	if len(rep.Tools) != 1 || rep.Tools[0].Install != "present" {
 		t.Fatalf("tools = %+v, want one present golangci-lint", rep.Tools)
@@ -39,10 +39,10 @@ func Test_BuildJSON_SingleRepo(t *testing.T) {
 		t.Fatalf("health grade = %d/%s, want 29/F", rep.Health.Score, rep.Health.Rating)
 	}
 	lint := rep.Checks[0]
-	if lint.Type != "quality" || lint.Feature != mend.FeatureLint || lint.Status != "FAIL" {
+	if lint.Type != "quality" || lint.Feature != care.FeatureLint || lint.Status != "FAIL" {
 		t.Errorf("lint check = %+v, want FAIL lint under quality", lint)
 	}
-	data, ok := lint.Data.(mend.QualityReport)
+	data, ok := lint.Data.(care.QualityReport)
 	if !ok || len(data.Issues) != 1 || data.Issues[0].File != "main.go" {
 		t.Errorf("lint data = %+v, want one main.go issue", lint.Data)
 	}
@@ -73,17 +73,17 @@ func Test_SourceID(t *testing.T) {
 // Test_BuildJSON_Module checks that the repo header carries the caller-resolved
 // module, independent of any check payload.
 func Test_BuildJSON_Module(t *testing.T) {
-	outputs := []mend.Rendered{
-		mend.Result(mend.FeatureTests, "go-test", "/src/repoA", mend.StatusOK,
-			mend.TestReport{ModulePath: "example.com/a", WithCoverage: true,
-				Suites: []mend.TestSuite{{Name: "example.com/a", Passed: true, Coverage: 87.5}}}),
+	outputs := []care.Rendered{
+		care.Result(care.FeatureTests, "go-test", "/src/repoA", care.StatusOK,
+			care.TestReport{ModulePath: "example.com/a", WithCoverage: true,
+				Suites: []care.TestSuite{{Name: "example.com/a", Passed: true, Coverage: 87.5}}}),
 	}
 
 	rep := buildJSON(outputs, RunInfo{Repo: "/src/repoA", Module: "example.com/a"}, rating.Default())
 	if rep.Dir != "/src/repoA" || rep.Module != "example.com/a" || len(rep.Checks) != 1 {
 		t.Fatalf("report = %+v, want repoA module example.com/a with 1 check", rep)
 	}
-	data, ok := rep.Checks[0].Data.(mend.TestReport)
+	data, ok := rep.Checks[0].Data.(care.TestReport)
 	if !ok || !data.WithCoverage || data.Suites[0].Coverage != 87.5 {
 		t.Errorf("test data = %+v, want coverage 87.5", rep.Checks[0].Data)
 	}

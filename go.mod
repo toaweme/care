@@ -1,4 +1,4 @@
-module github.com/toaweme/mend
+module github.com/toaweme/care
 
 go 1.25.0
 

@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/internal/rating"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/internal/rating"
 )
 
 // RunInfo is the repo context the caller resolves once and the renderer stamps onto
@@ -73,9 +73,9 @@ type Check struct {
 	Data       any    `json:"data,omitempty"`
 }
 
-// Report is mend's public JSON wire shape: a single repo's checks under a flat header,
+// Report is care's public JSON wire shape: a single repo's checks under a flat header,
 // the shared install-phase tools, and a graded health headline. Author is the
-// generating tool ("mend"); a version embeds in it ("mend:1.1") only if ever needed.
+// generating tool ("care"); a version embeds in it ("care:1.1") only if ever needed.
 type Report struct {
 	Author         string       `json:"author"`
 	Created        string       `json:"created,omitempty"`
@@ -90,14 +90,14 @@ type Report struct {
 // buildJSON shapes the phase-tagged output stream into the wire format: install
 // outputs become Tools, run outputs become Checks and feed the graded Health
 // headline, and the repo header comes from the caller-resolved RunInfo.
-func buildJSON(outputs []mend.Rendered, info RunInfo, grading rating.Config) Report {
-	rep := Report{Author: "mend", Dir: info.Repo, Module: info.Module, VersionControl: info.VC, Checks: []Check{}}
+func buildJSON(outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
+	rep := Report{Author: "care", Dir: info.Repo, Module: info.Module, VersionControl: info.VC, Checks: []Check{}}
 	if !info.Created.IsZero() {
 		rep.Created = info.Created.Format(time.RFC3339)
 	}
-	var runs []mend.Rendered
+	var runs []care.Rendered
 	for _, o := range outputs {
-		if o.Phase() == mend.PhaseInstall {
+		if o.Phase() == care.PhaseInstall {
 			rep.Tools = append(rep.Tools, ToolResult{
 				Tool:       toolID(o.Tool(), o.Version()),
 				Status:     o.Status().String(),
@@ -117,7 +117,7 @@ func buildJSON(outputs []mend.Rendered, info RunInfo, grading rating.Config) Rep
 // BuildReport shapes a run's outputs into the public JSON report. It is the exported
 // entry point for callers that write the report themselves (e.g. to a file) rather
 // than through Render.
-func BuildReport(outputs []mend.Rendered, info RunInfo, grading rating.Config) Report {
+func BuildReport(outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
 	return buildJSON(outputs, info, grading)
 }
 
@@ -152,7 +152,7 @@ func WriteReportFile(path string, rep Report) error {
 // re-grades health from the merged check set. The promoted metrics, run duration and
 // slowest check from the last full run are preserved, since a fast pass does not
 // recompute them. The install-phase tools are left untouched.
-func AmendReport(existing Report, outputs []mend.Rendered, info RunInfo, grading rating.Config) Report {
+func AmendReport(existing Report, outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
 	rep := existing
 	if !info.Created.IsZero() {
 		rep.Created = info.Created.Format(time.RFC3339)
@@ -166,7 +166,7 @@ func AmendReport(existing Report, outputs []mend.Rendered, info RunInfo, grading
 	rep.VersionControl = info.VC
 
 	for _, o := range outputs {
-		if o.Phase() == mend.PhaseInstall {
+		if o.Phase() == care.PhaseInstall {
 			continue
 		}
 		c := checkOf(o)
@@ -219,21 +219,21 @@ func regrade(prev Health, checks []Check, grading rating.Config) Health {
 }
 
 // outcomeOf maps a wire status string back onto the rating engine's Outcome, the
-// inverse of mend.Status.String().
+// inverse of care.Status.String().
 func outcomeOf(status string) rating.Outcome {
 	switch status {
-	case mend.StatusOK.String():
+	case care.StatusOK.String():
 		return rating.Pass
-	case mend.StatusWarn.String():
+	case care.StatusWarn.String():
 		return rating.Warn
-	case mend.StatusFail.String():
+	case care.StatusFail.String():
 		return rating.Fail
 	default:
 		return rating.Skip
 	}
 }
 
-func checkOf(o mend.Rendered) Check {
+func checkOf(o care.Rendered) Check {
 	return Check{
 		Type:       typeOf(o.Feature()),
 		Feature:    o.Feature(),
@@ -259,13 +259,13 @@ func profileLabel(name string) string {
 // the core.
 func typeOf(feature string) string {
 	switch feature {
-	case mend.FeatureSecrets, mend.FeatureVulnerabilities:
+	case care.FeatureSecrets, care.FeatureVulnerabilities:
 		return "security"
-	case mend.FeatureBuild, mend.FeatureLint, mend.FeatureDependencies, mend.FeatureRuntime, mend.FeatureDocs, mend.FeatureFixer:
+	case care.FeatureBuild, care.FeatureLint, care.FeatureDependencies, care.FeatureRuntime, care.FeatureDocs, care.FeatureFixer:
 		return "quality"
-	case mend.FeatureTests, mend.FeatureBenchmark:
+	case care.FeatureTests, care.FeatureBenchmark:
 		return "tests"
-	case mend.FeatureVersionControl:
+	case care.FeatureVersionControl:
 		return "repo"
 	default:
 		return ""
@@ -285,7 +285,7 @@ func toolID(name, version string) string {
 // reads as "goinstall" on the wire; brew and builtin pass through.
 func sourceID(installer string) string {
 	switch installer {
-	case string(mend.InstallerGo):
+	case string(care.InstallerGo):
 		return "goinstall"
 	default:
 		return installer

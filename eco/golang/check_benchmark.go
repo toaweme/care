@@ -14,19 +14,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/toaweme/mend"
-	"github.com/toaweme/mend/eco/golang/inspect"
+	"github.com/toaweme/care"
+	"github.com/toaweme/care/eco/golang/inspect"
 )
 
 type benchmarkCheck struct {
-	mend.BaseCheck
-	tool     mend.Tool
-	profiles []mend.RunProfile
+	care.BaseCheck
+	tool     care.Tool
+	profiles []care.RunProfile
 }
 
 var (
-	_ mend.Benchmark = (*benchmarkCheck)(nil)
-	_ mend.Profiled  = (*benchmarkCheck)(nil)
+	_ care.Benchmark = (*benchmarkCheck)(nil)
+	_ care.Profiled  = (*benchmarkCheck)(nil)
 )
 
 // NewBenchmark runs the repo's benchmarks (`go test -bench`) through the injected
@@ -38,8 +38,8 @@ var (
 // `go test -bench` has no machine-readable form (even under -json the figures
 // arrive as text in Output events), so this is the one feature that parses tool
 // stdout rather than structured JSON.
-func NewBenchmark(tool mend.Tool, profiles []mend.RunProfile) mend.Benchmark {
-	return &benchmarkCheck{BaseCheck: mend.NewBaseCheck("go-test-bench", tool), tool: tool, profiles: profiles}
+func NewBenchmark(tool care.Tool, profiles []care.RunProfile) care.Benchmark {
+	return &benchmarkCheck{BaseCheck: care.NewBaseCheck("go-test-bench", tool), tool: tool, profiles: profiles}
 }
 
 // Applies skips a repo with no benchmark functions outright, since `go test -bench`
@@ -84,21 +84,21 @@ func hasBenchmarks(dir string) bool {
 }
 
 // Profiles returns the configured benchmark profiles, or a single default.
-func (f *benchmarkCheck) Profiles() []mend.RunProfile {
+func (f *benchmarkCheck) Profiles() []care.RunProfile {
 	if len(f.profiles) == 0 {
-		return []mend.RunProfile{{Name: "default"}}
+		return []care.RunProfile{{Name: "default"}}
 	}
 	return f.profiles
 }
 
-func (f *benchmarkCheck) Run(ctx context.Context, dir string, opts mend.RunOptions) mend.Output[mend.BenchReport] {
+func (f *benchmarkCheck) Run(ctx context.Context, dir string, opts care.RunOptions) care.Output[care.BenchReport] {
 	out, err := f.tool.Exec(ctx, dir, benchArgs(opts.Profile)...)
 	results := parseBenchOutput(out)
 	if err != nil && len(results) == 0 {
-		return mend.Errored[mend.BenchReport]("tool failed", fmt.Errorf("failed to run benchmarks in %q: %w\n%s", dir, err, trimOutput(out)))
+		return care.Errored[care.BenchReport]("tool failed", fmt.Errorf("failed to run benchmarks in %q: %w\n%s", dir, err, trimOutput(out)))
 	}
 	if len(results) == 0 {
-		return mend.Skip[mend.BenchReport]("no benchmarks")
+		return care.Skip[care.BenchReport]("no benchmarks")
 	}
 	sort.Slice(results, func(i, j int) bool {
 		if results[i].Package != results[j].Package {
@@ -106,16 +106,16 @@ func (f *benchmarkCheck) Run(ctx context.Context, dir string, opts mend.RunOptio
 		}
 		return results[i].Name < results[j].Name
 	})
-	report := mend.BenchReport{Benchmarks: results}
+	report := care.BenchReport{Benchmarks: results}
 	if mod, err := inspect.ReadModulePath(dir); err == nil {
 		report.ModulePath = mod
 	}
-	return mend.Pass(report)
+	return care.Pass(report)
 }
 
 // benchArgs builds the `go test -bench` invocation for a run-profile: always
 // -benchmem, plus the profile's benchtime/count/cpu/tags and any raw extra flags.
-func benchArgs(p mend.RunProfile) []string {
+func benchArgs(p care.RunProfile) []string {
 	args := []string{"test", "-run", "^$", "-bench", ".", "-benchmem"}
 	if p.Benchtime != "" {
 		args = append(args, "-benchtime", p.Benchtime)
@@ -137,8 +137,8 @@ func benchArgs(p mend.RunProfile) []string {
 // parseBenchOutput distills `go test -bench -benchmem` output into one BenchResult
 // per benchmark line, tracking the current package from the `pkg:` header lines
 // that precede each package's results.
-func parseBenchOutput(out []byte) []mend.BenchResult {
-	var results []mend.BenchResult
+func parseBenchOutput(out []byte) []care.BenchResult {
+	var results []care.BenchResult
 	var pkg string
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
@@ -165,7 +165,7 @@ func parseBenchOutput(out []byte) []mend.BenchResult {
 				name = name[:i]
 			}
 		}
-		res := mend.BenchResult{Name: name, Package: pkg, Runs: runs}
+		res := care.BenchResult{Name: name, Package: pkg, Runs: runs}
 		for i := 2; i+1 < len(fields); i += 2 {
 			val, unit := fields[i], fields[i+1]
 			switch unit {
@@ -177,10 +177,10 @@ func parseBenchOutput(out []byte) []mend.BenchResult {
 				res.AllocsPerOp, _ = strconv.Atoi(val)
 			default:
 				// MB/s (b.SetBytes) and custom b.ReportMetric units ride the same
-				// line; keep them rather than drop them, since mend is general-purpose
+				// line; keep them rather than drop them, since care is general-purpose
 				// and a given repo's benchmarks may report any of them.
 				if v, err := strconv.ParseFloat(val, 64); err == nil {
-					res.Extra = append(res.Extra, mend.BenchMetric{Unit: unit, Value: v})
+					res.Extra = append(res.Extra, care.BenchMetric{Unit: unit, Value: v})
 				}
 			}
 		}
