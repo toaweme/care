@@ -62,7 +62,7 @@ func (f *secrets) Run(ctx context.Context, dir string, _ care.RunOptions) care.O
 	// everything: a secret committed in the past is a real exposure even if the
 	// file is gitignored at HEAD.
 	if !f.history {
-		findings = dropIgnored(dir, findings)
+		findings = dropIgnored(ctx, dir, findings)
 		if len(findings) == 0 {
 			return care.Pass(care.SecretReport{})
 		}
@@ -71,12 +71,12 @@ func (f *secrets) Run(ctx context.Context, dir string, _ care.RunOptions) care.O
 }
 
 // dropIgnored removes findings whose file git ignores in dir.
-func dropIgnored(dir string, findings []care.SecretFinding) []care.SecretFinding {
+func dropIgnored(ctx context.Context, dir string, findings []care.SecretFinding) []care.SecretFinding {
 	files := make([]string, 0, len(findings))
 	for _, fnd := range findings {
 		files = append(files, fnd.File)
 	}
-	ignored := git.IgnoredFiles(dir, files)
+	ignored := git.IgnoredFiles(ctx, dir, files)
 	if len(ignored) == 0 {
 		return findings
 	}

@@ -75,6 +75,9 @@ func hasBenchmarks(dir string) bool {
 		if !strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
+		// scanning the working tree of a repo the operator pointed care at; a symlink
+		// TOCTOU race has no attacker and no privilege to escalate to here.
+		//nolint:gosec // G122: read-only local scan of a trusted working tree
 		if b, err := os.ReadFile(path); err == nil && benchFuncRe.Match(b) {
 			return errStopWalk
 		}

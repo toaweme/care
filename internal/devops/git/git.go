@@ -4,6 +4,7 @@ package git
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -38,10 +39,10 @@ func extractTildePath(path string) string {
 }
 
 // getGitChangedFiles returns the changed files reported by git status in repoDir.
-func getGitChangedFiles(repoDir string) ([]File, error) {
+func getGitChangedFiles(ctx context.Context, repoDir string) ([]File, error) {
 	var out bytes.Buffer
 
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 	cmd.Dir = filepath.Clean(repoDir)
 	cmd.Stdout = &out
 
@@ -49,7 +50,7 @@ func getGitChangedFiles(repoDir string) ([]File, error) {
 		return nil, err
 	}
 
-	stat := getGitDiffStat(filepath.Clean(repoDir))
+	stat := getGitDiffStat(ctx, filepath.Clean(repoDir))
 
 	var files []File
 	for _, line := range strings.Split(out.String(), "\n") {
@@ -98,9 +99,9 @@ type lineStat struct{ added, deleted int }
 // renamed-and-edited file reports its real intra-file delta (not a whole-file
 // add/delete), keyed by the new path to match the status entry. Binary files report
 // no counts and are left zero. A repo with no HEAD (or any failure) yields a nil map.
-func getGitDiffStat(repoDir string) map[string]lineStat {
+func getGitDiffStat(ctx context.Context, repoDir string) map[string]lineStat {
 	var out bytes.Buffer
-	cmd := exec.Command("git", "diff", "HEAD", "--numstat", "-M", "-z")
+	cmd := exec.CommandContext(ctx, "git", "diff", "HEAD", "--numstat", "-M", "-z")
 	cmd.Dir = filepath.Clean(repoDir)
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -167,10 +168,10 @@ func parseStatus(code string) FileStatus {
 	}
 }
 
-func revListCount(repoDir, refSpec string) (behind, ahead int, ok bool) {
+func revListCount(ctx context.Context, repoDir, refSpec string) (behind, ahead int, ok bool) {
 	var out bytes.Buffer
 
-	cmd := exec.Command("git", "rev-list", "--left-right", "--count", refSpec)
+	cmd := exec.CommandContext(ctx, "git", "rev-list", "--left-right", "--count", refSpec)
 	cmd.Dir = filepath.Clean(repoDir)
 	cmd.Stdout = &out
 
@@ -191,14 +192,14 @@ func revListCount(repoDir, refSpec string) (behind, ahead int, ok bool) {
 	return behind, ahead, true
 }
 
-func getGitSyncStatus(repoDir string) (SyncStatus, error) {
+func getGitSyncStatus(ctx context.Context, repoDir string) (SyncStatus, error) {
 	// prefer the configured upstream
-	if behind, ahead, ok := revListCount(repoDir, "@{upstream}...HEAD"); ok {
+	if behind, ahead, ok := revListCount(ctx, repoDir, "@{upstream}...HEAD"); ok {
 		return SyncStatus{HasUpstream: true, Ahead: ahead, Behind: behind}, nil
 	}
 	// fall back to common default branches when no upstream is configured
 	for _, ref := range []string{"origin/main", "origin/master"} {
-		if behind, ahead, ok := revListCount(repoDir, ref+"...HEAD"); ok {
+		if behind, ahead, ok := revListCount(ctx, repoDir, ref+"...HEAD"); ok {
 			return SyncStatus{HasUpstream: true, Ahead: ahead, Behind: behind}, nil
 		}
 	}
@@ -207,7 +208,7 @@ func getGitSyncStatus(repoDir string) (SyncStatus, error) {
 
 // SyncStatus reports how the working tree's branch relates to its upstream,
 // returning a zero-value (no upstream) status when the directory is not a repo.
-func (p *Repo) SyncStatus() (SyncStatus, error) {
+func (p *Repo) SyncStatus(ctx context.Context) (SyncStatus, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -216,14 +217,14 @@ func (p *Repo) SyncStatus() (SyncStatus, error) {
 		return SyncStatus{}, fmt.Errorf("failed to check .git directory: %w", err)
 	}
 
-	return getGitSyncStatus(p.Dir)
+	return getGitSyncStatus(ctx, p.Dir)
 }
 
 // gitLine runs a git command in repoDir and returns its trimmed single-line
 // stdout, or "" and an error when the command fails.
-func gitLine(repoDir string, args ...string) (string, error) {
+func gitLine(ctx context.Context, repoDir string, args ...string) (string, error) {
 	var out bytes.Buffer
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = filepath.Clean(repoDir)
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -237,7 +238,7 @@ func gitLine(repoDir string, args ...string) (string, error) {
 // findings in intentionally gitignored files (e.g. a local .env), which are not
 // leaks. `git check-ignore` exits 1 when no path matches, which is not an error,
 // so any failure just yields an empty set and nothing is filtered.
-func IgnoredFiles(repoDir string, paths []string) map[string]bool {
+func IgnoredFiles(ctx context.Context, repoDir string, paths []string) map[string]bool {
 	ignored := make(map[string]bool, len(paths))
 	if len(paths) == 0 {
 		return ignored
@@ -246,7 +247,7 @@ func IgnoredFiles(repoDir string, paths []string) map[string]bool {
 	// the binary is the constant "git" and `--` separates flags from the path
 	// operands, so the variadic paths cannot inject options or another command.
 	//nolint:gosec // G204: fixed "git" binary, paths are operands after `--`
-	cmd := exec.Command("git", append([]string{"check-ignore", "--"}, paths...)...)
+	cmd := exec.CommandContext(ctx, "git", append([]string{"check-ignore", "--"}, paths...)...)
 	cmd.Dir = filepath.Clean(repoDir)
 	cmd.Stdout = &out
 	_ = cmd.Run()
@@ -261,7 +262,7 @@ func IgnoredFiles(repoDir string, paths []string) map[string]bool {
 // Info returns the repository's identity header (branch, commit, commit count,
 // dirty and sync state, commit time, and working-tree touched time), best-effort
 // per field.
-func (p *Repo) Info() (Info, error) {
+func (p *Repo) Info(ctx context.Context) (Info, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -273,35 +274,35 @@ func (p *Repo) Info() (Info, error) {
 	var info Info
 	// each field is best-effort: a fresh repo with no commits has no HEAD, so a
 	// failing probe leaves its field zero rather than failing the whole header.
-	if branch, err := gitLine(p.Dir, "rev-parse", "--abbrev-ref", "HEAD"); err == nil && branch != "HEAD" {
+	if branch, err := gitLine(ctx, p.Dir, "rev-parse", "--abbrev-ref", "HEAD"); err == nil && branch != "HEAD" {
 		// a detached HEAD (tagged CI checkout, rebase, bisect) reports the literal
 		// "HEAD"; treat that as no branch so a caller can fill it from CI instead.
 		info.Branch = branch
 	}
-	if tag, err := gitLine(p.Dir, "tag", "--points-at", "HEAD"); err == nil && tag != "" {
+	if tag, err := gitLine(ctx, p.Dir, "tag", "--points-at", "HEAD"); err == nil && tag != "" {
 		// multiple tags on one commit come back newline-separated; the first is enough
 		// to identify the release.
 		info.Tag = strings.SplitN(tag, "\n", 2)[0]
 	}
-	if commit, err := gitLine(p.Dir, "rev-parse", "--short", "HEAD"); err == nil {
+	if commit, err := gitLine(ctx, p.Dir, "rev-parse", "--short", "HEAD"); err == nil {
 		info.Commit = commit
 	}
-	if commit, err := gitLine(p.Dir, "rev-parse", "HEAD"); err == nil {
+	if commit, err := gitLine(ctx, p.Dir, "rev-parse", "HEAD"); err == nil {
 		info.CommitFull = commit
 	}
-	if count, err := gitLine(p.Dir, "rev-list", "--count", "HEAD"); err == nil {
+	if count, err := gitLine(ctx, p.Dir, "rev-list", "--count", "HEAD"); err == nil {
 		// a malformed count just leaves Commits zero; not worth failing the header
 		if _, serr := fmt.Sscanf(count, "%d", &info.Commits); serr != nil {
 			info.Commits = 0
 		}
 	}
-	if when, err := gitLine(p.Dir, "log", "-1", "--format=%cI"); err == nil && when != "" {
+	if when, err := gitLine(ctx, p.Dir, "log", "-1", "--format=%cI"); err == nil && when != "" {
 		if t, perr := time.Parse(time.RFC3339, when); perr == nil {
 			info.CommittedAt = t
 		}
 	}
 
-	files, err := getGitChangedFiles(p.Dir)
+	files, err := getGitChangedFiles(ctx, p.Dir)
 	if err != nil {
 		return info, fmt.Errorf("failed to get git changed files: %w", err)
 	}
@@ -316,7 +317,7 @@ func (p *Repo) Info() (Info, error) {
 		info.LinesDeleted += f.Deleted
 	}
 
-	sync, err := getGitSyncStatus(p.Dir)
+	sync, err := getGitSyncStatus(ctx, p.Dir)
 	if err != nil {
 		return info, fmt.Errorf("failed to get git sync status: %w", err)
 	}
@@ -329,7 +330,7 @@ func (p *Repo) Info() (Info, error) {
 
 // Status returns the working tree's changed files, or an empty slice when the
 // directory is not a git repository.
-func (p *Repo) Status() ([]File, error) {
+func (p *Repo) Status(ctx context.Context) ([]File, error) {
 	_, err := os.Stat(filepath.Join(p.Dir, ".git"))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -338,7 +339,7 @@ func (p *Repo) Status() ([]File, error) {
 		return nil, fmt.Errorf("failed to check .git directory: %w", err)
 	}
 
-	files, err := getGitChangedFiles(p.Dir)
+	files, err := getGitChangedFiles(ctx, p.Dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get git changed files: %w", err)
 	}

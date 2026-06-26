@@ -1,6 +1,9 @@
 package git
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // FileStatus represents the git status of a file.
 type FileStatus int
@@ -92,7 +95,7 @@ type Info struct {
 // Repository provides read-only inspection of a git repository: working-tree
 // status, upstream sync state, and the identity header.
 type Repository interface {
-	Status() ([]File, error)
-	SyncStatus() (SyncStatus, error)
-	Info() (Info, error)
+	Status(ctx context.Context) ([]File, error)
+	SyncStatus(ctx context.Context) (SyncStatus, error)
+	Info(ctx context.Context) (Info, error)
 }

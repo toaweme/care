@@ -23,13 +23,13 @@ func NewVersionControl() care.VersionControl {
 
 func (f *versionControl) Applies(string) bool { return true }
 
-func (f *versionControl) Run(_ context.Context, dir string, _ care.RunOptions) care.Output[care.VCReport] {
+func (f *versionControl) Run(ctx context.Context, dir string, _ care.RunOptions) care.Output[care.VCReport] {
 	r := git.NewRepository(dir)
-	files, err := r.Status()
+	files, err := r.Status(ctx)
 	if err != nil {
 		return care.Errored[care.VCReport]("git failed", fmt.Errorf("failed to read git status: %w", err))
 	}
-	sync, err := r.SyncStatus()
+	sync, err := r.SyncStatus(ctx)
 	if err != nil {
 		return care.Errored[care.VCReport]("git failed", fmt.Errorf("failed to read sync status: %w", err))
 	}

@@ -22,7 +22,7 @@ func writeModule(t *testing.T, goVer, body string) string {
 }
 
 func Test_Scanner_ScanDir(t *testing.T) {
-	hist, err := LoadHistory()
+	hist, err := LoadHistory(t.Context())
 	if err != nil {
 		t.Skipf("api history unavailable: %v", err)
 	}

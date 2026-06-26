@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -106,7 +107,7 @@ func run(cwd string, args []string) error {
 // non-git dir (or a probe failure) yields an empty header rather than an error: the
 // report still renders, just without the VC line.
 func resolveVC(dir string) *output.VCInfo {
-	info, err := git.NewRepository(dir).Info()
+	info, err := git.NewRepository(dir).Info(context.Background())
 	if err != nil {
 		return nil
 	}

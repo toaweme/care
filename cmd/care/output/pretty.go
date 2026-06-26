@@ -13,11 +13,14 @@ func NewPretty() *Pretty { return &Pretty{} }
 
 // Section prints a styled section header with optional dim-separated meta segments.
 func (p *Pretty) Section(title string, meta ...string) {
-	line := HeaderStyle.Render(title)
+	var line strings.Builder
+	line.WriteString(HeaderStyle.Render(title))
+	sep := DimStyle.Render("  │  ")
 	for _, m := range meta {
-		line += DimStyle.Render("  │  ") + m
+		line.WriteString(sep)
+		line.WriteString(m)
 	}
-	fmt.Println(line)
+	fmt.Println(line.String())
 }
 
 // SubHeader prints a dim line beneath a section header (the version-control

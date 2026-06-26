@@ -2,6 +2,7 @@ package minver
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -52,10 +53,10 @@ func (h *History) lookupMember(pkgPath, typeName, member string) (int, bool) {
 // apiDir returns the api directory of the active Go installation, honoring $GOROOT
 // then falling back to `go env GOROOT` (the non-deprecated way to locate the root
 // of the toolchain actually in use).
-func apiDir() string {
+func apiDir(ctx context.Context) string {
 	root := os.Getenv("GOROOT")
 	if root == "" {
-		root = goEnvRoot()
+		root = goEnvRoot(ctx)
 	}
 	if root == "" {
 		return ""
@@ -64,8 +65,8 @@ func apiDir() string {
 }
 
 // goEnvRoot asks the go tool for its GOROOT, returning "" when go is unavailable.
-func goEnvRoot() string {
-	out, err := exec.Command("go", "env", "GOROOT").Output()
+func goEnvRoot(ctx context.Context) string {
+	out, err := exec.CommandContext(ctx, "go", "env", "GOROOT").Output()
 	if err != nil {
 		return ""
 	}
@@ -75,8 +76,8 @@ func goEnvRoot() string {
 // LoadHistory reads $GOROOT/api/go1.N.txt into a History. It returns ErrNoAPI when
 // the api directory is absent so the caller can skip the stdlib-symbol analysis
 // rather than produce a wrong answer.
-func LoadHistory() (*History, error) {
-	dir := apiDir()
+func LoadHistory(ctx context.Context) (*History, error) {
+	dir := apiDir(ctx)
 	if dir == "" {
 		return nil, ErrNoAPI
 	}

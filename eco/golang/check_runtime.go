@@ -118,7 +118,7 @@ func toolchainNote(d gomod.Directives) string {
 // code can declare ("1.N") with the construct that forces it. ok is false when the
 // scan cannot run ($GOROOT/api absent, or the module does not type-check).
 func codeFloor(ctx context.Context, dir string) (ver, reason string, ok bool) {
-	hist, err := minver.LoadHistory()
+	hist, err := minver.LoadHistory(ctx)
 	if err != nil {
 		return "", "", false
 	}
