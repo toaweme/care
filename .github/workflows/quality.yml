@@ -3,7 +3,6 @@ name: Quality
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -37,9 +36,10 @@ jobs:
       - run: go test ./... -race
 
       - name: golangci-lint
-        run: |
-          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_VERSION}
-          golangci-lint run
+        # v9.2.1 (https://github.com/golangci/golangci-lint-action/releases/tag/v9.2.1)
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
+        with:
+          version: ${{ env.GOLANGCI_VERSION }}
 
   # non-gating early warning that the next Go release still builds and tests care.
   canary:
