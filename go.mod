@@ -6,9 +6,9 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/toaweme/cli v0.3.1
 	github.com/toaweme/cli/config/addons/yaml v0.2.0
-	github.com/toaweme/http v0.1.1
+	github.com/toaweme/http v0.2.0
 	golang.org/x/mod v0.37.0
-	golang.org/x/tools v0.46.0
+	golang.org/x/tools v0.47.0
 )
 
 require (
