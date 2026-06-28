@@ -5,6 +5,16 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-06-28
+
+### Features
+
+- Surface tool-failure errors in status output by [@iberflow](https://github.com/iberflow) in [1195e62](https://github.com/toaweme/care/commit/1195e628dfe678957f633198720af2102a9a46e7).
+
+### Documentation
+
+- Update README by [@iberflow](https://github.com/iberflow) in [1ff123d](https://github.com/toaweme/care/commit/1ff123d45ba86e8225d8d1643c93c0d4250ace79).
+
 ## [0.3.0] - 2026-06-28
 
 ### Features
@@ -100,6 +110,7 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
+[0.3.1]: https://github.com/toaweme/care/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/toaweme/care/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/toaweme/care/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/toaweme/care/releases/tag/v0.1.0
