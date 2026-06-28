@@ -18,10 +18,14 @@ env:
   GOLANGCI_VERSION: v2.12.2
 
 jobs:
-  # the gate: raw upstream checks, no dependency on care, so a change that breaks
-  # care's own check logic is still caught here. Single Go version from go.mod.
-  test:
+  # one flat gate: raw upstream checks on the single Go version from go.mod, then
+  # run the stable released care on itself through our own action. id-token is
+  # needed to publish; upload only on main so PRs don't litter artifacts.
+  quality:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -31,47 +35,11 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - run: go build ./...
-      - run: go vet ./...
-      - run: go test ./... -race
-
       - name: golangci-lint
         # v9.2.1 (https://github.com/golangci/golangci-lint-action/releases/tag/v9.2.1)
         uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
         with:
           version: ${{ env.GOLANGCI_VERSION }}
-
-  # non-gating early warning that the next Go release still builds and tests care.
-  canary:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-
-      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
-        with:
-          go-version: stable
-
-      - run: go build ./...
-      - run: go test ./... -race
-
-  # informational: run care on itself through our own action (verified install +
-  # report + publish), which also proves the action keeps working. Push-only so
-  # fork PRs don't hit OIDC restrictions; reports on the latest release, not the
-  # PR's code.
-  report:
-    needs: test
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
       - name: Resolve latest care release
         id: rel
@@ -83,3 +51,4 @@ jobs:
         with:
           version: ${{ steps.rel.outputs.tag }}
           output: report.care.json
+          upload: ${{ github.ref == 'refs/heads/main' }}
