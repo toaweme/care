@@ -1,6 +1,8 @@
 package output
 
 import (
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +47,46 @@ func Test_BuildJSON_SingleRepo(t *testing.T) {
 	data, ok := lint.Data.(care.QualityReport)
 	if !ok || len(data.Issues) != 1 || data.Issues[0].File != "main.go" {
 		t.Errorf("lint data = %+v, want one main.go issue", lint.Data)
+	}
+}
+
+// Test_BuildJSON_ErroredCheck checks that a tool-failure outcome carries its
+// underlying error into the wire (the error field), so a consumer sees why a check
+// errored rather than a bare FAIL with no payload.
+func Test_BuildJSON_ErroredCheck(t *testing.T) {
+	outputs := []care.Rendered{
+		care.ErroredResult[care.VulnReport](care.FeatureVulnerabilities, "govulncheck", "/src/repoA",
+			"tool failed", errors.New("failed to run govulncheck: exit status 1\ngovulncheck: no required module provides package")),
+	}
+	rep := buildJSON(outputs, RunInfo{Repo: "/src/repoA"}, rating.Default())
+	if len(rep.Checks) != 1 {
+		t.Fatalf("got %d checks, want 1", len(rep.Checks))
+	}
+	c := rep.Checks[0]
+	if c.Status != "FAIL" || c.Data != nil {
+		t.Errorf("errored check = status %q data %v, want FAIL with no data", c.Status, c.Data)
+	}
+	if !strings.Contains(c.Error, "failed to run govulncheck") || !strings.Contains(c.Error, "no required module") {
+		t.Errorf("error field = %q, want the wrapped govulncheck failure", c.Error)
+	}
+}
+
+// Test_RenderPretty_ErroredCheckShowsError checks the default (verbosity 0) pretty
+// output surfaces an errored check's underlying error beneath the summary, so
+// "tool failed" is actionable without needing -vv.
+func Test_RenderPretty_ErroredCheckShowsError(t *testing.T) {
+	outputs := []care.Rendered{
+		care.ErroredResult[care.VulnReport](care.FeatureVulnerabilities, "govulncheck", "/src/repoA",
+			"tool failed", errors.New("failed to run govulncheck: exit status 1\ngovulncheck: no required module provides package")),
+	}
+	out := capture(t, func() {
+		renderPretty(outputs, RunInfo{Repo: "/src/repoA"}, RenderOptions{Verbosity: 0})
+	})
+	if !strings.Contains(out, "tool failed") {
+		t.Errorf("output missing the summary note:\n%s", out)
+	}
+	if !strings.Contains(out, "failed to run govulncheck") || !strings.Contains(out, "no required module") {
+		t.Errorf("output missing the error detail at verbosity 0:\n%s", out)
 	}
 }
 

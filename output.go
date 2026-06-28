@@ -115,6 +115,16 @@ func Result[T Report](feature, check, dir string, status Status, data T) Output[
 	}
 }
 
+// ErroredResult builds a stamped run-phase tool-failure Output: note is the short
+// label ("tool failed"), err the underlying detail. It mirrors Result so a caller
+// (or a test) outside this package can synthesize an errored outcome.
+func ErroredResult[T Report](feature, check, dir, note string, err error) Output[T] {
+	return Output[T]{
+		phase: PhaseRun, feature: feature, check: check, dir: dir,
+		status: StatusFail, note: note, err: err,
+	}
+}
+
 // InstallResult builds an install-phase outcome for one tool; note is its short
 // state text ("present", "installed", ...).
 func InstallResult(tool string, status Status, note string) Rendered {

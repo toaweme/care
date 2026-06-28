@@ -260,10 +260,26 @@ func renderCheck(p *Pretty, o care.Rendered, width int, opts RenderOptions) {
 		return
 	}
 	rows := o.Rows(opts.Verbosity)
-	if o.Status() == care.StatusFail && o.Err() != nil && opts.Verbosity > 1 {
-		rows = append(rows, []string{"err: " + o.Err().Error()})
+	// an errored check (a tool failure) carries no payload rows, so surface its
+	// underlying error inline rather than hiding it behind -vv: "tool failed" on
+	// its own is undiagnosable. Each line of a multi-line tool error is its own row.
+	if o.Status() == care.StatusFail && o.Err() != nil {
+		rows = append(rows, errorRows(o.Err())...)
 	}
 	p.ItemRows(rows)
+}
+
+// errorRows splits an errored check's underlying error into one item row per line,
+// dropping blank lines, so a multi-line tool failure (a wrapped message plus the
+// tool's own output) reads as a clean block beneath the summary.
+func errorRows(err error) [][]string {
+	var rows [][]string
+	for _, line := range strings.Split(err.Error(), "\n") {
+		if strings.TrimSpace(line) != "" {
+			rows = append(rows, []string{strings.TrimRight(line, "\r")})
+		}
+	}
+	return rows
 }
 
 // statusRank orders check rows for display: passing first, then skipped, warnings,

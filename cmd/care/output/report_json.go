@@ -70,6 +70,10 @@ type Check struct {
 	Status     string `json:"status"`
 	DurationMs int64  `json:"duration_ms"`
 	Data       any    `json:"data,omitempty"`
+	// Error is the underlying failure detail for an errored check (a tool that
+	// failed to run, with no payload). Absent for normal pass/fail outcomes, whose
+	// detail lives in Data.
+	Error string `json:"error,omitempty"`
 }
 
 // Report is care's public JSON wire shape: a single repo's checks under a flat header, the
@@ -233,7 +237,7 @@ func outcomeOf(status string) rating.Outcome {
 }
 
 func checkOf(o care.Rendered) Check {
-	return Check{
+	c := Check{
 		Type:       typeOf(o.Feature()),
 		Feature:    o.Feature(),
 		Profile:    profileLabel(o.Profile()),
@@ -242,6 +246,10 @@ func checkOf(o care.Rendered) Check {
 		DurationMs: o.DurationMs(),
 		Data:       o.Data(),
 	}
+	if err := o.Err(); err != nil {
+		c.Error = err.Error()
+	}
+	return c
 }
 
 // profileLabel returns the run-profile name to display, or "" for the implicit default (an
