@@ -11,8 +11,17 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 
 - Add reference-link footer and unreleased section to changelog by [@iberflow](https://github.com/iberflow) in [4394f76](https://github.com/toaweme/care/commit/4394f760fe7e16c530f1cc3a1601f6851ba0d9c9).
 
+### Fixes
+
+- Stop goreleaser dropping care's release notes by [@iberflow](https://github.com/iberflow) in [1d08f31](https://github.com/toaweme/care/commit/1d08f3186cd84c09a532b1a5a216db7ca68f0958).
+
+### Documentation
+
+- Add v0.3.0 release notes by [@iberflow](https://github.com/iberflow) in [bff4e90](https://github.com/toaweme/care/commit/bff4e90bf5138f72d108e791e3c4ec5e708f621a).
+
 ### Refactors
 
+- Tidy up changelog package by [@iberflow](https://github.com/iberflow) in [8af6e51](https://github.com/toaweme/care/commit/8af6e5177539963636184db2a7a4bfa73ec98f40).
 - Rewrite doc comments in stdlib style by [@iberflow](https://github.com/iberflow) in [39df098](https://github.com/toaweme/care/commit/39df098670f580859adc4791a9191615af2c9ace).
 
 ### CI & Build
