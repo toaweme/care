@@ -55,12 +55,20 @@ jobs:
 
       # care generates its own conventional-commit notes (the org's single
       # source), which goreleaser then uses verbatim via --release-notes. Built
-      # from the tagged source, so the release bootstraps its own tooling. A
-      # failure degrades to a minimal file rather than blocking the release.
-      # written to the runner temp dir, not the work tree: a release-notes file in
+      # from the tagged source, so the release bootstraps its own tooling.
+      # Written to the runner temp dir, not the work tree: a release-notes file in
       # the repo would leave git dirty and goreleaser's --clean check would abort.
+      # tee echoes the notes into the job log so an empty/odd result is visible,
+      # and a non-empty guard substitutes a minimal fallback rather than shipping
+      # an empty release body.
       - name: Generate release notes
-        run: go run ./cmd/care changelog > "$RUNNER_TEMP/notes.md" || echo "See the commit history for changes in this release." > "$RUNNER_TEMP/notes.md"
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          go run ./cmd/care changelog | tee "$notes" || true
+          if [ ! -s "$notes" ]; then
+            echo "::warning::care changelog produced empty notes; using fallback"
+            echo "See the commit history for changes in this release." > "$notes"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
