@@ -17,7 +17,7 @@ inputs:
   output:
     description: >-
       Path to write the JSON report to, care's own --output. Use a <name>.care.json
-      name. A failing check still writes it rather than failing the step; omit to
+      name. A failing check still writes it rather than failing the step. Omit to
       skip the file.
     required: false
     default: ""
@@ -29,9 +29,9 @@ inputs:
     default: "false"
   publish-url:
     description: >-
-      POST the report to this endpoint; care's hosted dashboard is
+      POST the report to this endpoint. care's hosted dashboard is
       https://code.toawe.me/ingest?kind=care. Needs id-token: write to mint the OIDC
-      token (audience is the URL origin); without it publishing is skipped.
+      token (audience is the URL origin). Without it publishing is skipped.
     required: false
     default: ""
   verify:

@@ -59,79 +59,6 @@ wget -qO- https://github.com/toaweme/care/releases/download/v{v}/care_{v}_linux_
 Every release also lists the exact archive for each OS/arch on the
 [releases page](https://github.com/toaweme/care/releases).
 
-### GitHub Actions
-
-Use the bundled action to run `care` in another repo's CI. Pin it to an exact tag:
-the tag is the single source of truth, so it installs the matching `care` binary
-and verifies its cosign signature and SHA-256 before running.
-
-The action does one thing: install `care` and run `care status`. Three optional
-inputs modify it - `output` writes a JSON report, `publish-url` publishes it, and
-`strict` fails the job on failing checks. With none of them it just runs status and
-reports to the log:
-
-```yaml
-jobs:
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.1.0   # installs care v0.1.0, runs `care status`
-```
-
-Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
-origin as audience). care's hosted dashboard is
-`https://code.toawe.me/ingest?kind=care`; point `publish-url` there or at your own
-engine. `strict` only gates - it leaves no report file unless `output` (or
-`publish-url`) asks for one. Omit `strict` to keep the job non-gating:
-
-```yaml
-jobs:
-  quality:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write              # only for publishing
-    steps:
-      - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.1.0
-        with:
-          strict: true                                  # fail the job, but keep the report
-          output: report.care.json                      # write the JSON report (<name>.care.json)
-          publish-url: https://ci.example.com/care      # POST the report here; omit to keep it local
-```
-
-`care` is left on `PATH`, so any other care command is just your own step, e.g.
-`run: care get lint` to sync the lint config before the check.
-
-Inputs (none are required):
-
-| Input | Purpose | Default |
-| --- | --- | --- |
-| `version` | Override the binary version, only when pinning the action to a SHA or branch | Latest |
-| `output` | Report file path, care's own `--output` (use a `<name>.care.json` name). A failing check still writes it rather than failing the step | - |
-| `strict` | `true` fails the job when a check fails (after any report is published); `false` reports without failing. Gates only - writes no file on its own | `false` |
-| `publish-url` | Full URL to POST the report to; empty keeps it local. Needs `id-token: write` | - |
-| `verify` | Cosign signature check | `true` |
-| `dir` | Directory care runs in (care's `--cwd`), for a module in a subdirectory with its own `go.mod`. The report still lands in the workspace root | `.` |
-
-The publish endpoint receives the report JSON as the POST body with an
-`Authorization: Bearer <OIDC token>` header (token audience is the URL's origin).
-A self-hosted codeviewer exposes the same path on its own host:
-`https://<your-host>/ingest?kind=care`.
-
-The report stays in the workspace even when checks fail, so a failure report is
-readable without re-running care. Only the download temp dir is cleaned up. The
-`report-path` output exposes the report location for later steps, so you can
-upload it as an artifact yourself if you want one.
-
-Reports stay local unless you set `publish-url` and grant `id-token: write`, in
-which case the report is POSTed there (care's hosted dashboard, or your own
-endpoint). With `publish-url` set but no `id-token: write`, publishing is skipped
-with a warning.
-
-Pin to an exact tag and bump it deliberately when you adopt a new release.
-
 `care` shells out to a handful of tools (`golangci-lint`, `govulncheck`, `betterleaks`, plus `go`/`gofmt` from your
 toolchain). With `auto_install: true` (the default) it provisions any missing binary the moment a check needs it, via
 `brew` or `go install`; pin or disable individual tools in config.
@@ -170,6 +97,98 @@ Sources resolve in this order:
 Local and embedded sources are zero-network, a remote fetch is an explicit.
 
 Set Github repo token via `--token`/`-t`, `env:GITHUB_TOKEN`
+
+### `care changelog`
+
+Derive release notes from conventional commits, the org's single source for a release body (it replaces
+goreleaser's own changelog). The positional tag is the range end; `--since` sets the start.
+
+```sh
+care changelog                         # notes for the latest tag (or HEAD), since the previous tag
+care changelog v1.2.0                  # notes ending at v1.2.0, since the tag before it
+care changelog v1.2.0 --since v1.0.0   # explicit range
+care changelog --full                  # from the first commit, ignoring tags
+care changelog --write                 # maintain CHANGELOG.md in place instead of printing
+```
+
+- Prints to stdout by default (redirect to capture). `--write` maintains the Keep a Changelog file at
+  `--file`/`-f` (default `./CHANGELOG.md`).
+- For the natural range, a matching `## [version]` section already in `--file` is used verbatim, so hand-written
+  prose reaches the release. An explicit `--since`/`--full` always re-derives from git.
+- `--plain` drops commit/PR links and author attribution. Git-host extras (Full Changelog link, contributors)
+  need a token via `--token`/`-t` or `GITHUB_TOKEN`/`GH_TOKEN`.
+
+## GitHub Actions
+
+Use the bundled action to run `care` in a repo's CI. Pin it to an exact tag:
+the tag is the single source of truth, so it installs the matching `care` binary
+and verifies its cosign signature and SHA-256 before running.
+
+The action does one thing: install `care` and run `care status`. Three optional
+inputs modify it - `output` writes a JSON report, `publish-url` publishes it, and
+`strict` fails the job on failing checks. With none of them it just runs status and
+reports to the log:
+
+```yaml
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<sha>
+      - uses: toaweme/care@v0.4.0   # installs care v0.4.0, runs `care status`
+```
+
+Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
+origin as audience). Point `publish-url` at your own ingestion
+engine. `strict: true` fails the step when a check fails. Omit it to report without
+failing the job:
+
+```yaml
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # only for publishing
+    steps:
+      - uses: actions/checkout@<sha>
+      - uses: toaweme/care@v0.4.0
+        with:
+          strict: true                                  # fail the job, but keep the report
+          output: report.care.json                      # write the JSON report (<name>.care.json)
+          publish-url: https://ci.example.com/care      # POST the report here; omit to keep it local
+```
+
+`care` is left on `PATH`, so any other care command is just your own step, e.g.
+`run: care get lint` to sync the lint config before the check.
+
+Inputs (none are required):
+
+| Input | Purpose | Default |
+| --- | --- | --- |
+| `version` | Override the binary version, only when pinning the action to a SHA or branch | Latest |
+| `output` | Report file path, care's own `--output` (use a `<name>.care.json` name). A failing check still writes it rather than failing the step | - |
+| `strict` | `true` fails the step when a check fails, after any report is published. `false` reports without failing | `false` |
+| `publish-url` | Full URL to POST the report to; empty keeps it local. Needs `id-token: write` | - |
+| `verify` | Cosign signature check | `true` |
+| `dir` | Directory care runs in (care's `--cwd`), for a module in a subdirectory with its own `go.mod`. The report still lands in the workspace root | `.` |
+
+The publish endpoint receives the report JSON as the POST body with an
+`Authorization: Bearer <OIDC token>` header (token audience is the URL's origin).
+A self-hosted codeviewer exposes the same path on its own host:
+`https://<your-host>/ingest?kind=care`.
+
+The report stays in the workspace even when checks fail, so a failure report is
+readable without re-running care. Only the download temp dir is cleaned up. The
+`report-path` output exposes the report location for later steps, so you can
+upload it as an artifact yourself if you want one.
+
+Reports stay local unless you set `publish-url` and grant `id-token: write`, in
+which case the report is POSTed there (care's hosted dashboard, or your own
+endpoint). With `publish-url` set but no `id-token: write`, publishing is skipped
+with a warning.
+
+Pin to an exact tag and bump it deliberately when you adopt a new release.
 
 ## Checklist
 
