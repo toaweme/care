@@ -17,9 +17,8 @@
 It's a shortcut for developers working in multi-repo, cross-language ecosystem scenarios.
 
 Switching from language to language, maintaining good standards across everything we touch is hard.
-Maintaining multiple Go or TS, Python, Rust or PHP, or whatever projects is difficult.
 
-Care CLI is a guide and a helper to conform to each ecosystem's best practices.
+Care CLI is a guide and a helper to conform to each ecosystem's best practices. Golang for now.
 
 ```shell
 care
@@ -53,8 +52,7 @@ go install github.com/toaweme/care/cmd/care@latest
 # homebrew
 brew install toaweme/tap/care
 
-# binary (linux x64; swap version/os/arch as needed)
-# replace 
+# binary
 wget -qO- https://github.com/toaweme/care/releases/download/v{v}/care_{v}_linux_x64.tar.gz | tar xz
 ```
 
