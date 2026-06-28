@@ -53,11 +53,22 @@ jobs:
       # v4.1.2 (https://github.com/sigstore/cosign-installer/releases/tag/v4.1.2)
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
 
+      # care generates its own conventional-commit notes (the org's single
+      # source), which goreleaser then uses verbatim via --release-notes. Built
+      # from the tagged source, so the release bootstraps its own tooling. A
+      # failure degrades to a minimal file rather than blocking the release.
+      # written to the runner temp dir, not the work tree: a release-notes file in
+      # the repo would leave git dirty and goreleaser's --clean check would abort.
+      - name: Generate release notes
+        run: go run ./cmd/care changelog > "$RUNNER_TEMP/notes.md" || echo "See the commit history for changes in this release." > "$RUNNER_TEMP/notes.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # v7.2.2 (https://github.com/goreleaser/goreleaser-action/releases/tag/v7.2.2)
       - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89
         with:
           version: "~> v2"   # lock to the GoReleaser v2 line; v3 won't silently break the run
-          args: release --clean
+          args: release --clean --release-notes=${{ runner.temp }}/notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # PAT with write access to toaweme/homebrew-tap so goreleaser can

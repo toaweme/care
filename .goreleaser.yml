@@ -76,34 +76,7 @@ brews:
       system "#{bin}/care", "--help"
 
 changelog:
-  sort: asc
-  # render authors as @github-username (pulled from the GitHub API), never a
-  # real name or email. The very first release has no prior tag to diff, so it
-  # falls back to raw git log - later releases always show @usernames.
-  use: github
-  # no exclude filters: every commit type carries useful info, so nothing is
-  # dropped - chore/ci/docs/test are grouped into their own sections instead.
-  groups:
-    - title: Features
-      regexp: '^.*?feat(\(.+\))??!?:.+$'
-      order: 0
-    - title: Fixes
-      regexp: '^.*?fix(\(.+\))??!?:.+$'
-      order: 1
-    - title: Documentation
-      regexp: '^.*?docs(\(.+\))??!?:.+$'
-      order: 2
-    - title: Refactors
-      regexp: '^.*?(refactor|ref)(\(.+\))??!?:.+$'
-      order: 3
-    - title: Tests
-      regexp: '^.*?test(\(.+\))??!?:.+$'
-      order: 4
-    - title: CI & Build
-      regexp: '^.*?(ci|build)(\(.+\))??!?:.+$'
-      order: 5
-    - title: Chores & Other
-      order: 999
+  disable: true
 
 release:
   # mark vX.Y.Z-rc / -beta / -alpha tags as GitHub pre-releases automatically.

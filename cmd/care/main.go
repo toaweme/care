@@ -96,6 +96,8 @@ func run(cwd string, args []string) error {
 	app.Add("get", getCommand)
 	getCommand.Add("lint", NewGetLintCommand(httpClient, templates.FS.ReadFile, golang.ModulePath))
 
+	app.Add("changelog", NewChangelogCommand())
+
 	if err := app.Run(args); cli.IsRealError(err) {
 		return err
 	}
