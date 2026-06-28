@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add changelog command for conventional-commit release notes by [@iberflow](https://github.com/iberflow) in [746c3da](https://github.com/toaweme/care/commit/746c3daaab295d1939b6ea5e1dd68b294aa8747c).
 - Install tools from verified release downloads by [@iberflow](https://github.com/iberflow) in [13da7fa](https://github.com/toaweme/care/commit/13da7fa3b186237f9b8e17e91234e4bb549457ee).
 
+### Documentation
+
+- Add v0.2.0 release notes by [@iberflow](https://github.com/iberflow) in [7c3fb96](https://github.com/toaweme/care/commit/7c3fb96605fe631052ea0a728eab31cede69a6ac).
+
 ### Chores & Other
 
 - Bump deps by [@iberflow](https://github.com/iberflow) in [52da119](https://github.com/toaweme/care/commit/52da119e1ecdbe22927df0f09c7a4c91f6553056).
@@ -72,3 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pin workflow actions to SHAs and add dependabot by [@iberflow](https://github.com/iberflow) in [6819313](https://github.com/toaweme/care/commit/6819313a5ebadf45edfbd146609908fc771cbb55).
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
+
+[0.2.0]: https://github.com/toaweme/care/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/toaweme/care/releases/tag/v0.1.0

@@ -90,6 +90,9 @@ func Test_AppendExtras(t *testing.T) {
 	if !strings.HasSuffix(strings.TrimRight(got, "\n"), "**Full Changelog**: https://github.com/o/r/compare/v1...v2") {
 		t.Errorf("compare link should be last:\n%s", got)
 	}
+	if !strings.Contains(got, "\n\n**Full Changelog**:") {
+		t.Errorf("compare link must be preceded by a blank line:\n%s", got)
+	}
 }
 
 func Test_AppendExtras_Empty(t *testing.T) {

@@ -71,6 +71,15 @@ func (g *GitHub) CompareURL(from, to string) string {
 	return fmt.Sprintf("https://%s/%s/%s/compare/%s...%s", g.host, g.owner, g.repo, from, to)
 }
 
+// TagURL returns the web link to a tag's release page, or "" when the tag is empty. It is the
+// reference target for a first release, which has no prior tag to compare against.
+func (g *GitHub) TagURL(tag string) string {
+	if tag == "" {
+		return ""
+	}
+	return g.webBase() + "/releases/tag/" + tag
+}
+
 // webBase is the repository's web root, https://host/owner/repo, the prefix for
 // commit and pull-request links.
 func (g *GitHub) webBase() string {

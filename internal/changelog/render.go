@@ -5,15 +5,15 @@ import (
 	"strings"
 )
 
-// keepAChangelogHeader tops a generated CHANGELOG.md. It is emitted only when the
-// engine writes the whole file (Generate); Sync/FillIn preserve whatever header
-// the existing file already carries.
-const keepAChangelogHeader = `# Changelog
+// defaultHeader tops a generated CHANGELOG.md. It is emitted only when the
+// existing file has no header of its own; any header already present is preserved
+// verbatim, so a hand-written preamble is never overwritten.
+const defaultHeader = `# Changelog
 
-All notable changes to this project are documented here.
+All notable changes to this project are documented here, newest first.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
+and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `
 
 // shortHashLen is how many leading hex characters of a commit hash render as the
@@ -184,7 +184,7 @@ func AppendExtras(body string, extras Extras) string {
 		}
 	}
 	if extras.CompareURL != "" {
-		fmt.Fprintf(&b, "\n**Full Changelog**: %s\n", extras.CompareURL)
+		fmt.Fprintf(&b, "\n\n**Full Changelog**: %s\n", extras.CompareURL)
 	}
 	return strings.TrimRight(b.String(), "\n") + "\n"
 }

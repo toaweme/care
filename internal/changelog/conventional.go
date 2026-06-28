@@ -61,7 +61,8 @@ func capitalize(s string) string {
 	return string(r)
 }
 
-// Grouper assigns commits to sections by the configured groups, compiled once.
+// Grouper assigns commits to sections using the configured groups, with each
+// group's match regexp compiled once at construction and reused per commit.
 type Grouper struct {
 	groups []Group
 	res    []*regexp.Regexp

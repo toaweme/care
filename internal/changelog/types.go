@@ -82,6 +82,9 @@ type GitHost interface {
 	// CompareURL returns the host's compare/{from}...{to} link, or "" when one
 	// can't be formed (e.g. no prior tag).
 	CompareURL(from, to string) string
+	// TagURL returns the host's web link to a tag's release page, or "" when one can't be formed.
+	// Used for the first release, which has no prior tag and so no range to compare against.
+	TagURL(tag string) string
 	// CommitURL returns the host's web link to a commit by hash, or "" when one
 	// can't be formed.
 	CommitURL(hash string) string

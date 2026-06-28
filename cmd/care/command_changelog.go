@@ -14,9 +14,9 @@ import (
 	"github.com/toaweme/care/internal/changelog"
 )
 
-// ChangelogConfig is the flag set for `care changelog`. By default it prints a
-// ref range's release notes to stdout, reading curated prose from --file for the
-// natural range; with --write it instead maintains the CHANGELOG.md at --file.
+// ChangelogConfig is the flag set for `care changelog`. By default it prints a ref range's
+// release notes to stdout, reading curated prose from --file for the natural range; with
+// --write it instead maintains the CHANGELOG.md at --file.
 type ChangelogConfig struct {
 	Tag     string `arg:"0" env:"CARE_CHANGELOG_TAG" help:"Range end to describe (defaults to GITHUB_REF_NAME, the latest tag, then HEAD)"`
 	Since   string `arg:"since" env:"CARE_CHANGELOG_SINCE" help:"Exclusive start of the range, any ref (defaults to the previous tag)"`
@@ -29,8 +29,7 @@ type ChangelogConfig struct {
 	Plain   bool   `arg:"plain" env:"CARE_CHANGELOG_PLAIN" default:"false" help:"Drop commit/PR links and author attribution, leaving only the cleaned subjects"`
 }
 
-// ChangelogCommand prints conventional-commit release notes and maintains a
-// CHANGELOG.md.
+// ChangelogCommand prints conventional-commit release notes and maintains a CHANGELOG.md.
 type ChangelogCommand struct {
 	cli.BaseCommand[ChangelogConfig]
 }
@@ -42,8 +41,8 @@ func NewChangelogCommand() *ChangelogCommand {
 	return &ChangelogCommand{BaseCommand: cli.NewBaseCommand[ChangelogConfig]()}
 }
 
-// Run maintains CHANGELOG.md when --write is set, otherwise prints a ref range's
-// release notes to stdout.
+// Run maintains CHANGELOG.md when --write is set, otherwise prints a ref range's release
+// notes to stdout.
 func (c *ChangelogCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	ctx := context.Background()
 	cwd := options.Cwd
@@ -67,7 +66,7 @@ func (c *ChangelogCommand) Help() string {
 
 // Description returns the richer body shown in detailed help.
 func (c *ChangelogCommand) Description() string {
-	return "Derives release notes straight from git: groups conventional commits, strips their prefixes, and links each entry to its PR and commit. The range defaults to the latest tag and its predecessor; name a tag as the argument, set the start with --since, or span all history with --full. For the natural range, a matching curated section in --file (default ./CHANGELOG.md) is used verbatim. Pass --write to maintain that CHANGELOG.md instead of printing (adds missing versions, keeps your edits); add --release v0.2.0 to stage a section for the upcoming, not-yet-tagged version so you commit the changelog and then tag that commit. Pass --plain for a link-free, attribution-free body."
+	return "Derives release notes straight from git: groups conventional commits, strips their prefixes, and links each entry to its PR and commit. The range defaults to the latest tag and its predecessor; name a tag as the argument, set the start with --since, or span all history with --full. For the natural range, a matching curated section in --file (default ./CHANGELOG.md) is used verbatim. Pass --write to maintain that CHANGELOG.md instead of printing (adds missing versions, refreshes an [Unreleased] section from commits past the latest tag, and keeps your edits); add --release v0.2.0 to promote that staged work into the upcoming, not-yet-tagged version so you commit the changelog and then tag that commit. Pass --plain for a link-free, attribution-free body."
 }
 
 // Examples returns usage examples shown in detailed and agent help.
@@ -82,9 +81,8 @@ func (c *ChangelogCommand) Examples() [][]string {
 	}
 }
 
-// write produces the maintained CHANGELOG.md content: the tag-driven Update by
-// default, or InsertVersion when --release stages an as-yet-untagged version from
-// the resolved range.
+// write produces the maintained CHANGELOG.md content: the tag-driven Update by default, or
+// InsertVersion when --release stages an as-yet-untagged version from the resolved range.
 func (c *ChangelogCommand) write(ctx context.Context, cwd string, cfg ChangelogConfig, engine *changelog.Engine) (string, error) {
 	existing := readChangelog(cwd, cfg.File)
 	if cfg.Release == "" {
@@ -95,8 +93,8 @@ func (c *ChangelogCommand) write(ctx context.Context, cwd string, cfg ChangelogC
 		return content, nil
 	}
 	git := changelog.NewGit(cwd)
-	// the staged version describes work past the latest tag, so the range ends at
-	// the named ref (default HEAD), not the latest tag.
+	// the staged version describes work past the latest tag, so the range ends at the named
+	// ref (default HEAD), not the latest tag.
 	to := cfg.Tag
 	if to == "" {
 		to = "HEAD"
@@ -112,14 +110,13 @@ func (c *ChangelogCommand) write(ctx context.Context, cwd string, cfg ChangelogC
 	return content, nil
 }
 
-// today is the local date stamped on a staged release section, in the Keep a
-// Changelog YYYY-MM-DD format.
+// today is the local date stamped on a staged release section, in the Keep a Changelog
+// YYYY-MM-DD format.
 func today() string {
 	return time.Now().Format("2006-01-02")
 }
 
-// printNotes resolves the ref range and prints its notes to stdout (redirect to
-// capture).
+// printNotes resolves the ref range and prints its notes to stdout (redirect to capture).
 func (c *ChangelogCommand) printNotes(ctx context.Context, cwd string, cfg ChangelogConfig, engine *changelog.Engine) error {
 	git := changelog.NewGit(cwd)
 	to, err := resolveTo(ctx, git, cfg.Tag)
@@ -133,8 +130,8 @@ func (c *ChangelogCommand) printNotes(ctx context.Context, cwd string, cfg Chang
 	if err != nil {
 		return err
 	}
-	// only the natural range reads curated prose from the file; an explicit
-	// --since/--full owns its range and must derive from git.
+	// only the natural range reads curated prose from the file; an explicit --since/--full
+	// owns its range and must derive from git.
 	var existing string
 	if cfg.Since == "" && !cfg.Full {
 		existing = readChangelog(cwd, cfg.File)
@@ -147,16 +144,16 @@ func (c *ChangelogCommand) printNotes(ctx context.Context, cwd string, cfg Chang
 	return nil
 }
 
-// detectEngine builds the engine: a git backend plus the detected git host (which
-// degrades to the git-log path when the host is unknown or its API fails).
+// detectEngine builds the engine: a git backend plus the detected git host, which degrades
+// to the git-log path when the host is unknown or its API fails.
 func detectEngine(ctx context.Context, cwd string, cfg ChangelogConfig) *changelog.Engine {
 	git := changelog.NewGit(cwd)
 	host := changelog.DetectGitHost(ctx, cwd, cfg.Remote, cfg.Token)
 	return changelog.NewEngine(git, host, changelog.DefaultGroups, cfg.Plain)
 }
 
-// resolveTo picks the range end: the tag argument, else the CI tag ref, else the
-// latest tag, else HEAD.
+// resolveTo picks the range end: the tag argument, else the CI tag ref, else the latest
+// tag, else HEAD.
 func resolveTo(ctx context.Context, git *changelog.Git, tag string) (string, error) {
 	if tag != "" {
 		return tag, nil
@@ -176,8 +173,8 @@ func resolveTo(ctx context.Context, git *changelog.Git, tag string) (string, err
 	return "HEAD", nil
 }
 
-// resolveSince picks the range start: empty (the first commit) with --full, the
-// explicit --since ref, else the tag before to. --full and --since conflict.
+// resolveSince picks the range start: empty (the first commit) with --full, the explicit
+// --since ref, else the tag before to. --full and --since conflict.
 func resolveSince(ctx context.Context, git *changelog.Git, cfg ChangelogConfig, to string) (string, error) {
 	if cfg.Full && cfg.Since != "" {
 		return "", errors.New("--full and --since are mutually exclusive")
@@ -192,8 +189,8 @@ func resolveSince(ctx context.Context, git *changelog.Git, cfg ChangelogConfig, 
 	return git.PreviousTag(ctx, to)
 }
 
-// readChangelog reads the CHANGELOG.md, returning "" when it does not exist so
-// the engine takes the fileless path.
+// readChangelog reads the CHANGELOG.md, returning "" when it does not exist so the engine
+// takes the fileless path.
 func readChangelog(cwd, file string) string {
 	data, err := os.ReadFile(resolveDest(cwd, file))
 	if err != nil {
@@ -202,9 +199,8 @@ func readChangelog(cwd, file string) string {
 	return string(data)
 }
 
-// writeFile writes the maintained CHANGELOG.md to dest (relative to cwd) and
-// prints a confirmation. Notes go straight to stdout instead, so a caller
-// redirects them with the shell.
+// writeFile writes the maintained CHANGELOG.md to dest (relative to cwd) and prints a
+// confirmation. Notes go straight to stdout instead, so a caller redirects them with the shell.
 func writeFile(cwd, dest, content string) error {
 	path := resolveDest(cwd, dest)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil { //nolint:gosec // a changelog file must stay world-readable

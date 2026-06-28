@@ -56,7 +56,7 @@ func (e *Engine) BuildVersion(ctx context.Context, tag string) (Version, error) 
 // backed by a tag (an Unreleased block, a hand-written entry) stay at the top.
 // Idempotent: a re-run reproduces its own output.
 func (e *Engine) Update(ctx context.Context, existing string) (string, error) {
-	doc := ParseDocument(existing)
+	doc := ParseDocument(StripLinkRefs(existing))
 	tags, err := e.git.Tags(ctx)
 	if err != nil {
 		return "", err
@@ -81,19 +81,76 @@ func (e *Engine) Update(ctx context.Context, existing string) (string, error) {
 		}
 		blocks = append(blocks, e.renderer.RenderVersion(v))
 	}
-	// keep present versions with no matching tag (e.g. an Unreleased block) at the top.
+	// the [Unreleased] block is regenerated from commits past the latest tag (below),
+	// so drop the old one here; any other untagged block (a hand-written entry) is
+	// kept verbatim at the top.
 	tagged := taggedSemvers(tags)
 	var orphans []string
 	for _, pv := range doc.Versions {
-		if !tagged[pv.Semver] {
-			orphans = append(orphans, pv.Raw)
+		if tagged[pv.Semver] || strings.EqualFold(pv.Semver, unreleasedSemver) {
+			continue
 		}
+		orphans = append(orphans, pv.Raw)
+	}
+	// from is the latest tag (tags are newest-first), or "" before the first release
+	// so the Unreleased range spans all history.
+	from := ""
+	if len(tags) > 0 {
+		from = tags[0]
+	}
+	unreleased, err := e.buildUnreleased(ctx, from, doc)
+	if err != nil {
+		return "", err
 	}
 	header := doc.Header
 	if strings.TrimSpace(header) == "" {
-		header = keepAChangelogHeader
+		header = defaultHeader
 	}
-	return assemble(header, append(orphans, blocks...)), nil
+	var all []string
+	if unreleased != "" {
+		all = append(all, unreleased)
+	}
+	all = append(all, orphans...)
+	all = append(all, blocks...)
+	// only link [Unreleased] when a prior tag gives it a compare base.
+	var staged *linkRef
+	if unreleased != "" && from != "" {
+		staged = &linkRef{semver: unreleasedSemver, from: from, to: unreleasedRef}
+	}
+	if refs := e.linkRefs(ctx, staged); refs != "" {
+		all = append(all, refs)
+	}
+	return assemble(header, all), nil
+}
+
+// unreleasedSemver is the bracket label for the staging section that gathers
+// commits made since the latest tag, matching the Keep a Changelog [Unreleased]
+// convention. It carries no date and always sorts above the tagged releases.
+const unreleasedSemver = "Unreleased"
+
+// unreleasedRef is the range end for the [Unreleased] section: the working tree's
+// HEAD, so every commit past the latest tag is staged.
+const unreleasedRef = "HEAD"
+
+// buildUnreleased renders the [Unreleased] section from the commits in
+// (from, HEAD], or "" when there are none. from is the latest tag, or empty before
+// the first release so the range spans all history. Prose under an existing
+// [Unreleased] block is carried over; only its groups are regenerated. Author
+// handles stay blank for unpushed commits (the host compare can't see them), but
+// the commit links still resolve from the local hashes.
+func (e *Engine) buildUnreleased(ctx context.Context, from string, doc Document) (string, error) {
+	commits, err := e.commits(ctx, from, unreleasedRef)
+	if err != nil {
+		return "", err
+	}
+	if len(commits) == 0 {
+		return "", nil
+	}
+	v := Version{Semver: unreleasedSemver, Sections: e.grouper.Group(commits)}
+	if pv, ok := doc.Find(unreleasedSemver); ok {
+		v.Prose = pv.Prose
+	}
+	return e.renderer.RenderVersion(v), nil
 }
 
 // InsertVersion stages an as-yet-untagged release in CHANGELOG.md: it builds a
@@ -112,7 +169,7 @@ func (e *Engine) InsertVersion(ctx context.Context, from, to, version, date, exi
 		return "", err
 	}
 	semver := Semver(version)
-	doc := ParseDocument(existing)
+	doc := ParseDocument(StripLinkRefs(existing))
 	v := Version{
 		Tag:      version,
 		Semver:   semver,
@@ -126,14 +183,20 @@ func (e *Engine) InsertVersion(ctx context.Context, from, to, version, date, exi
 	// (the matching one replaced above) keeps its file order beneath it.
 	blocks := []string{e.renderer.RenderVersion(v)}
 	for _, pv := range doc.Versions {
-		if pv.Semver == semver {
+		// the staged version replaces its own prior block, and absorbs the
+		// [Unreleased] commits, so drop both rather than keeping them verbatim.
+		if pv.Semver == semver || strings.EqualFold(pv.Semver, unreleasedSemver) {
 			continue
 		}
 		blocks = append(blocks, pv.Raw)
 	}
 	header := doc.Header
 	if strings.TrimSpace(header) == "" {
-		header = keepAChangelogHeader
+		header = defaultHeader
+	}
+	staged := &linkRef{semver: semver, from: from, to: version}
+	if refs := e.linkRefs(ctx, staged); refs != "" {
+		blocks = append(blocks, refs)
 	}
 	return assemble(header, blocks), nil
 }
@@ -149,7 +212,7 @@ func (e *Engine) InsertVersion(ctx context.Context, from, to, version, date, exi
 func (e *Engine) ExtractNotes(ctx context.Context, from, to, existing string) (string, error) {
 	extras := e.extras(ctx, from, to)
 	if existing != "" {
-		if pv, ok := ParseDocument(existing).Find(Semver(to)); ok {
+		if pv, ok := ParseDocument(StripLinkRefs(existing)).Find(Semver(to)); ok {
 			return AppendExtras(pv.Body, extras), nil
 		}
 	}
@@ -187,6 +250,57 @@ func (e *Engine) extras(ctx context.Context, from, to string) Extras {
 		extras.NewContributors = contributors
 	}
 	return extras
+}
+
+// linkRef is one Keep a Changelog reference-link target: the bracket label (the semver) and the
+// range it resolves to. from is empty for a first release, which links to its tag page rather than
+// a compare range.
+type linkRef struct {
+	semver string
+	from   string
+	to     string
+}
+
+// linkRefs builds the Keep a Changelog reference-link footer, the block of `[semver]: url` lines
+// that makes each `## [semver]` heading a clickable link. Every tagged version maps to its
+// compare/{prev}...{tag} URL, except the first release, which has no predecessor and maps to its
+// tag page. A non-nil staged version (the not-yet-tagged --release path) is listed first.
+//
+// It returns the empty string when there is no host, since the git-log path can form no web links,
+// or when nothing resolves to a URL.
+func (e *Engine) linkRefs(ctx context.Context, staged *linkRef) string {
+	if e.host == nil {
+		return ""
+	}
+	var b strings.Builder
+	if staged != nil {
+		if url := e.versionURL(staged.from, staged.to); url != "" {
+			fmt.Fprintf(&b, "[%s]: %s\n", staged.semver, url)
+		}
+	}
+	tags, err := e.git.Tags(ctx)
+	if err != nil {
+		return strings.TrimRight(b.String(), "\n")
+	}
+	for _, tag := range tags {
+		from, err := e.git.PreviousTag(ctx, tag)
+		if err != nil {
+			continue
+		}
+		if url := e.versionURL(from, tag); url != "" {
+			fmt.Fprintf(&b, "[%s]: %s\n", Semver(tag), url)
+		}
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// versionURL is the reference target for one version: its compare link when a prior tag exists,
+// otherwise the tag's release page for a first release.
+func (e *Engine) versionURL(from, to string) string {
+	if from == "" {
+		return e.host.TagURL(to)
+	}
+	return e.host.CompareURL(from, to)
 }
 
 // assemble joins the header and version blocks with blank-line separators and a

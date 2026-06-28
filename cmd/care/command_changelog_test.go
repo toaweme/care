@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Test_Changelog_Write_FromTags covers the default --write path: the maintained
-// file is rebuilt from the repo's tags.
+// Test_Changelog_Write_FromTags covers the default --write path: the maintained file is
+// rebuilt from the repo's tags.
 func Test_Changelog_Write_FromTags(t *testing.T) {
 	dir := newGitRepo(t)
 	gitCommit(t, dir, "feat: first feature")
@@ -29,8 +29,8 @@ func Test_Changelog_Write_FromTags(t *testing.T) {
 	}
 }
 
-// Test_Changelog_Write_Release covers the --release path: an untagged version is
-// staged from the range past the latest tag, dated today, ahead of tagging.
+// Test_Changelog_Write_Release covers the --release path: an untagged version is staged
+// from the range past the latest tag, dated today, ahead of tagging.
 func Test_Changelog_Write_Release(t *testing.T) {
 	dir := newGitRepo(t)
 	gitCommit(t, dir, "feat: released feature")

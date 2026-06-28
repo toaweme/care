@@ -39,6 +39,13 @@ func (f *fakeHost) CompareURL(from, to string) string {
 	return "https://example.test/compare/" + from + "..." + to
 }
 
+func (f *fakeHost) TagURL(tag string) string {
+	if tag == "" {
+		return ""
+	}
+	return "https://example.test/releases/tag/" + tag
+}
+
 func (f *fakeHost) CommitURL(hash string) string {
 	if hash == "" {
 		return ""
@@ -90,6 +97,104 @@ func Test_Engine_Update_FromScratch(t *testing.T) {
 	}
 	if !strings.Contains(out, "### Features") || !strings.Contains(out, "- Initial feature") {
 		t.Errorf("missing features:\n%s", out)
+	}
+}
+
+func Test_Engine_Update_GeneratesUnreleased(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: shipped")
+	tag(t, dir, "v0.1.0")
+	commit(t, dir, "feat: pending feature")
+	commit(t, dir, "fix: pending fix")
+
+	git := NewGit(dir)
+	host := &fakeHost{git: git}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	out, err := engine.Update(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the staging section leads, undated, above the tagged release.
+	if !strings.Contains(out, "## [Unreleased]") {
+		t.Fatalf("missing unreleased section:\n%s", out)
+	}
+	if iu, i01 := strings.Index(out, "## [Unreleased]"), strings.Index(out, "## [0.1.0]"); iu < 0 || i01 < 0 || iu > i01 {
+		t.Errorf("unreleased should lead, before 0.1.0:\n%s", out)
+	}
+	// the commits past the latest tag land in it, and not the released one.
+	if !strings.Contains(out, "- Pending feature") || !strings.Contains(out, "- Pending fix") {
+		t.Errorf("unreleased missing pending commits:\n%s", out)
+	}
+	if strings.Count(out, "Shipped") != 1 {
+		t.Errorf("released commit leaked into unreleased:\n%s", out)
+	}
+	// it links to the compare range from the latest tag to HEAD.
+	if !strings.Contains(out, "[Unreleased]: https://example.test/compare/v0.1.0...HEAD") {
+		t.Errorf("missing unreleased compare reference:\n%s", out)
+	}
+	// idempotent and prose-preserving: a hand-written highlight survives a re-run.
+	withProse := strings.Replace(out, "## [Unreleased]\n\n", "## [Unreleased]\n\nHand-written highlight.\n\n", 1)
+	again, err := engine.Update(context.Background(), withProse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(again, "Hand-written highlight.") {
+		t.Errorf("re-run lost unreleased prose:\n%s", again)
+	}
+	if strings.Count(again, "## [Unreleased]") != 1 {
+		t.Errorf("unreleased block duplicated:\n%s", again)
+	}
+}
+
+func Test_Engine_Update_NoUnreleasedWhenAtTag(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: shipped")
+	tag(t, dir, "v0.1.0")
+
+	engine := NewEngine(NewGit(dir), nil, DefaultGroups, false)
+	out, err := engine.Update(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// HEAD is the latest tag, so there is nothing to stage.
+	if strings.Contains(out, "## [Unreleased]") {
+		t.Errorf("unexpected unreleased section with no commits past the tag:\n%s", out)
+	}
+}
+
+func Test_Engine_InsertVersion_PromotesUnreleased(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: shipped")
+	tag(t, dir, "v0.1.0")
+	commit(t, dir, "feat: pending feature")
+
+	git := NewGit(dir)
+	engine := NewEngine(git, nil, DefaultGroups, false)
+
+	// a changelog already carrying an [Unreleased] staging block.
+	staged, err := engine.Update(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(staged, "## [Unreleased]") {
+		t.Fatalf("setup missing unreleased block:\n%s", staged)
+	}
+
+	from, err := git.PreviousTag(context.Background(), "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := engine.InsertVersion(context.Background(), from, "HEAD", "v0.2.0", "2026-06-28", staged)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// promoting to a tagged version replaces the staging block, not duplicates it.
+	if strings.Contains(out, "## [Unreleased]") {
+		t.Errorf("unreleased block survived promotion:\n%s", out)
+	}
+	if !strings.Contains(out, "## [0.2.0] - 2026-06-28") || !strings.Contains(out, "- Pending feature") {
+		t.Errorf("promotion missing staged version with its commits:\n%s", out)
 	}
 }
 
@@ -182,6 +287,59 @@ func Test_Engine_Update_AddsMissingAndPreservesEdits(t *testing.T) {
 	// the fully-formed, hand-edited 0.1.0 section survived verbatim.
 	if !strings.Contains(out, "Human authored note for 0.1.0.") || !strings.Contains(out, "old feature, hand edited") {
 		t.Errorf("update clobbered human edits:\n%s", out)
+	}
+}
+
+func Test_Engine_Update_AppendsLinkReferences(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: old feature")
+	tag(t, dir, "v0.1.0")
+	commit(t, dir, "feat: new feature")
+	tag(t, dir, "v0.2.0")
+
+	git := NewGit(dir)
+	host := &fakeHost{git: git}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	out, err := engine.Update(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the newest version links to its compare range.
+	if !strings.Contains(out, "\n[0.2.0]: https://example.test/compare/v0.1.0...v0.2.0\n") {
+		t.Errorf("missing compare reference for 0.2.0:\n%s", out)
+	}
+	// the first release has no range, so it links to its tag page, and the
+	// reference footer is the tail of the file.
+	if !strings.HasSuffix(strings.TrimRight(out, "\n"), "[0.1.0]: https://example.test/releases/tag/v0.1.0") {
+		t.Errorf("first release should link to its tag page, last in file:\n%s", out)
+	}
+	// re-running regenerates the footer rather than stacking a second copy.
+	again, err := engine.Update(context.Background(), out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again != out {
+		t.Errorf("update not idempotent with link refs:\nfirst:\n%s\nsecond:\n%s", out, again)
+	}
+	if n := strings.Count(again, "[0.2.0]: "); n != 1 {
+		t.Errorf("expected one 0.2.0 reference, got %d:\n%s", n, again)
+	}
+}
+
+func Test_Engine_Update_NoHostOmitsLinkReferences(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: only feature")
+	tag(t, dir, "v1.0.0")
+
+	engine := NewEngine(NewGit(dir), nil, DefaultGroups, false)
+	out, err := engine.Update(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// without a host no web links can be formed, so the footer is omitted.
+	if strings.Contains(out, "[1.0.0]: ") {
+		t.Errorf("git-log path should not emit reference links:\n%s", out)
 	}
 }
 

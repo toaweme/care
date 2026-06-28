@@ -9,6 +9,31 @@ import (
 // an optional ` - 2026-06-27` date. The bracketed version is the slice key.
 var versionHeadingRe = regexp.MustCompile(`^##\s+\[([^\]]+)\](?:\s*-\s*(\S+))?`)
 
+// linkRefRe matches a Markdown reference-link definition, `[label]: target`. This is the form the
+// engine emits in the link-reference footer at the bottom of CHANGELOG.md.
+var linkRefRe = regexp.MustCompile(`^\[[^\]]+\]:\s+\S+`)
+
+// StripLinkRefs removes the trailing link-reference footer from a CHANGELOG.md and returns the rest
+// unchanged. The footer is the run of `[label]: target` lines at the end of the file, together with
+// any blank lines around it; every version block above it is left intact.
+//
+// The engine rewrites this footer on each pass. Stripping it before parsing keeps writes
+// idempotent: otherwise a stale footer would be absorbed into the last version's body, preserved
+// verbatim, and then duplicated by the freshly appended one.
+func StripLinkRefs(content string) string {
+	lines := strings.Split(content, "\n")
+	end := len(lines)
+	for end > 0 {
+		line := strings.TrimSpace(lines[end-1])
+		if line == "" || linkRefRe.MatchString(line) {
+			end--
+			continue
+		}
+		break
+	}
+	return strings.TrimRight(strings.Join(lines[:end], "\n"), "\n")
+}
+
 // Document is a parsed CHANGELOG.md: the header preamble (everything before the
 // first version heading) and the version sections in file order (newest first by
 // convention, but parsing does not reorder).
