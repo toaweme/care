@@ -76,13 +76,17 @@ brews:
       system "#{bin}/care", "--help"
 
 changelog:
-  disable: true
+  # keep this false. The release notes come from care's own `--release-notes`
+  # file (see release.yml), which already bypasses goreleaser's commit changelog.
+  # Setting `disable: true` would ALSO make goreleaser ignore `--release-notes`
+  # and ship an empty body (only release.footer survives) - that emptied v0.3.0.
+  disable: false
 
 release:
   # mark vX.Y.Z-rc / -beta / -alpha tags as GitHub pre-releases automatically.
   prerelease: auto
-  # appended under the auto-generated commit changelog. Kept deliberately small
-  # so it stays useful even on releases that carry only a commit or two.
+  # appended under care's generated release notes. Kept deliberately small so it
+  # stays useful even on releases that carry only a commit or two.
   footer: |
     ## Install
 
