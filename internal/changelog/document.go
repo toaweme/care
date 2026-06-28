@@ -102,12 +102,6 @@ func (d Document) Find(semver string) (ParsedVersion, bool) {
 	return ParsedVersion{}, false
 }
 
-// Has reports whether a version with the given semver is already in the document.
-func (d Document) Has(semver string) bool {
-	_, ok := d.Find(semver)
-	return ok
-}
-
 type blockAccumulator struct {
 	semver  string
 	date    string

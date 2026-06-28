@@ -29,15 +29,6 @@ type Commit struct {
 	Breaking bool
 }
 
-// Display returns the author identity to render: the host handle when known,
-// otherwise the git author name.
-func (c Commit) Display() string {
-	if c.Handle != "" {
-		return "@" + c.Handle
-	}
-	return c.Author
-}
-
 // Section is a titled group of commits within a version, e.g. "Features".
 type Section struct {
 	Title   string
@@ -69,6 +60,15 @@ type Group struct {
 	Title string
 	Match string
 	Order int
+}
+
+// Remote identifies a repository's git host: its host name and owner/repo. An
+// unknown host still parses (host set, owner/repo filled when derivable) so the
+// caller can decide to degrade to the git-log path.
+type Remote struct {
+	Host  string
+	Owner string
+	Repo  string
 }
 
 // GitHost is the small host-specific provider. The git-log backend is the

@@ -7,15 +7,6 @@ import (
 	thttp "github.com/toaweme/http"
 )
 
-// Remote identifies a repository's git host: its host name and owner/repo. An
-// unknown host still parses (host set, owner/repo filled when derivable) so the
-// caller can decide to degrade to the git-log path.
-type Remote struct {
-	Host  string
-	Owner string
-	Repo  string
-}
-
 // remoteRe parses the owner/repo and host out of the common git remote URL
 // shapes: https://host/owner/repo(.git) and git@host:owner/repo(.git).
 var remoteRe = regexp.MustCompile(`(?:https?://|git@|ssh://git@)([^/:]+)[/:]([^/]+)/(.+?)(?:\.git)?$`)

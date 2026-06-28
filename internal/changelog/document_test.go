@@ -54,7 +54,7 @@ func Test_ParseDocument(t *testing.T) {
 	if _, ok := doc.Find("1.0.0"); !ok {
 		t.Errorf("Find(1.0.0) should succeed")
 	}
-	if doc.Has("9.9.9") {
-		t.Errorf("Has(9.9.9) should be false")
+	if _, ok := doc.Find("9.9.9"); ok {
+		t.Errorf("Find(9.9.9) should be false")
 	}
 }
