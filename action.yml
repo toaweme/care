@@ -1,5 +1,5 @@
 name: care
-description: Install the care CLI from a verified release, run it, and optionally report and publish.
+description: Install the care CLI from a verified release and run care status, optionally reporting and publishing.
 author: toaweme
 
 branding:
@@ -9,72 +9,41 @@ branding:
 inputs:
   version:
     description: >-
-      Exact release tag to install, e.g. v0.1.0. Defaults to the ref the action
-      itself was pinned to (uses: toaweme/care@v0.1.0 installs care v0.1.0), so
-      the tag is the single source of truth. Pass this explicitly only when the
-      action is pinned to a commit SHA or branch.
-    required: false
-    default: ""
-  args:
-    description: >-
-      Optional. Run "care <args>" after install. The value is split on spaces into
-      separate arguments, so "get lint --force" passes three. Empty by default, in
-      which case the action only installs care for you to invoke in later steps.
-      For the report flow use output/strict/publish-url instead.
+      Release tag to install, e.g. v0.1.0. Defaults to the tag the action is pinned
+      to (uses: toaweme/care@v0.1.0), so the tag is the single source of truth. Set
+      it only when pinning to a SHA or branch.
     required: false
     default: ""
   output:
     description: >-
-      Write the JSON report to this file path, the same as care's own --output flag
-      (runs "care status --json --pretty --output <path>"). Use a "<name>.care.json"
-      name (e.g. report.care.json, the default when strict or publish-url is set) -
-      the .care.json suffix is the convention care reports use. A failing check still
-      writes the report rather than failing the step. To gate the workflow on failing
-      checks while keeping the report, set strict.
+      Path to write the JSON report to, care's own --output. Use a <name>.care.json
+      name. A failing check still writes it rather than failing the step; omit to
+      skip the file.
     required: false
     default: ""
   strict:
     description: >-
-      true fails the workflow when any care check fails (after the report has been
-      written, uploaded, and published, so the failure report is still kept). false
-      (the default) reports without failing the job. Use true to gate a repo on
-      quality, false to only observe.
+      Fail the job when any check fails. The failure is raised last, after
+      publishing, so a failing report is still kept.
     required: false
     default: "false"
   publish-url:
     description: >-
-      Full URL to POST the JSON report to, defaulting to care's hosted dashboard at
-      https://code.toawe.me/ingest?kind=care. A self-hosted codeviewer uses the same
-      path on its own host, https://YOUR-HOST/ingest?kind=care. Override it for your
-      own engine, or set it empty to disable publishing. The action POSTs the report
-      JSON as the body with an Authorization Bearer GitHub OIDC token whose audience
-      is the URL origin (scheme and host), so it needs "permissions: id-token: write"
-      on the job. Without that permission publishing is skipped with a warning. Only
-      runs when a report exists (set output, strict, or upload).
+      POST the report to this endpoint; care's hosted dashboard is
+      https://code.toawe.me/ingest?kind=care. Needs id-token: write to mint the OIDC
+      token (audience is the URL origin); without it publishing is skipped.
     required: false
-    default: "https://code.toawe.me/ingest?kind=care"
-  upload:
-    description: >-
-      Upload the report as a workflow artifact, named after the output file (e.g.
-      report.care.json), so it can be downloaded from a finished run (including a
-      failing one) without re-running care. Default false. The report always stays
-      in the workspace and is exposed via the report-path output regardless.
-    required: false
-    default: "false"
+    default: ""
   verify:
     description: >-
-      Verify the cosign keyless signature on checksums.txt before trusting it.
-      Keep this on. Turn it off only in air-gapped runners without network egress
-      to the Sigstore transparency log.
+      Verify the cosign signature on checksums.txt before trusting the download.
+      Turn off only on air-gapped runners without Sigstore access.
     required: false
     default: "true"
   dir:
     description: >-
-      Directory care runs in, passed through as care's --cwd. Set it for a module
-      in a subdirectory with its own go.mod (e.g. a server submodule), so one repo
-      can report each module from its own matrix job. The JSON report is still
-      written to the workspace root, so output/upload/publish are unaffected.
-      Defaults to the repository root.
+      Directory to run care in, its --cwd, for a module in a subdirectory with its
+      own go.mod. The report still lands at the workspace root.
     required: false
     default: "."
 
@@ -183,54 +152,40 @@ runs:
         rm -rf "$work"
         echo "installed care ${tag} to ${install_dir}"
 
-    - name: Run care
-      if: inputs.args != ''
-      shell: bash
-      env:
-        CARE_ARGS: ${{ inputs.args }}
-        CARE_DIR: ${{ inputs.dir }}
-      run: care --cwd "$CARE_DIR" $CARE_ARGS
-
-    - name: Generate report
+    - name: Run care status
       id: report
-      # driven by what the user asks to keep, not by publish-url (which defaults
-      # non-empty). publishing only happens if one of these produced a report.
-      if: inputs.output != '' || inputs.strict == 'true' || inputs.upload == 'true'
+      # the action's one job: run care status. a report file is written only when it
+      # is kept (output) or published (publish-url); strict just needs the captured
+      # exit code, so it gates without leaving a file behind. for any other care
+      # command, care is already on PATH - run it in your own step.
       shell: bash
       env:
         CARE_OUTPUT: ${{ inputs.output }}
+        CARE_PUBLISH_URL: ${{ inputs.publish-url }}
         CARE_DIR: ${{ inputs.dir }}
       run: |
         set -uo pipefail
-        # report lives in the workspace so it survives install cleanup and is
-        # reachable by later steps. strict/publish-url imply the default path.
-        report="${CARE_OUTPUT:-report.care.json}"
+        # the report lives at the workspace root so it survives install cleanup and
+        # the publish step finds it at the relative path even when care ran in a
+        # subdir (--cwd).
+        report=""; report_flags=""
+        if [ -n "$CARE_OUTPUT" ] || [ -n "$CARE_PUBLISH_URL" ]; then
+          report="${CARE_OUTPUT:-report.care.json}"
+          report_flags="--json --pretty --output ${GITHUB_WORKSPACE}/${report}"
+        fi
         echo "report-path=$report" >> "$GITHUB_OUTPUT"
-        # the artifact is named after the report file, so output is the only place
-        # the name is set (artifact names can't contain the path separator).
-        echo "artifact-name=$(basename "$report")" >> "$GITHUB_OUTPUT"
-        # keep the report at the workspace root even when care runs in a subdir
-        # (--cwd), so the upload/publish steps below find it at the relative path.
-        report_abs="${GITHUB_WORKSPACE}/${report}"
-        # capture care's exit code rather than failing now, so the report still
-        # uploads and publishes. the gate step below re-raises it when asked.
+        # capture care's exit code rather than failing now, so a failing report still
+        # publishes. the gate step below re-raises it when strict is set.
         code=0
-        care --cwd "$CARE_DIR" status --json --pretty --output "$report_abs" --expand-install || code=$?
+        care --cwd "$CARE_DIR" status $report_flags --expand-install || code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
 
-    - name: Upload report artifact
-      # always() so a failing-check report is still uploaded before the gate fails.
-      if: always() && inputs.upload == 'true'
-      # v7.0.1 (https://github.com/actions/upload-artifact/releases/tag/v7.0.1)
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-      with:
-        name: ${{ steps.report.outputs.artifact-name }}
-        path: ${{ steps.report.outputs.report-path }}
-        if-no-files-found: ignore
-
     - name: Publish report
-      # always() so a failing-check report is still published before the gate fails.
-      if: always() && inputs.publish-url != ''
+      # publish when there is somewhere to send it and the status step produced a
+      # report file. report-path is empty when no report was written (strict-only),
+      # so it gates this step without re-deriving the inputs. always() keeps a
+      # failing-check report publishing before the gate fails.
+      if: always() && inputs.publish-url != '' && steps.report.outputs.report-path != ''
       shell: bash
       env:
         CARE_PUBLISH_URL: ${{ inputs.publish-url }}
@@ -239,7 +194,9 @@ runs:
         set -euo pipefail
         url="$CARE_PUBLISH_URL"
         report="$CARE_REPORT_PATH"
-        if [ -z "$url" ] || [ ! -s "$report" ]; then
+        # the step's if-condition already guarantees url and report-path are set;
+        # this only guards the rare case where the file is missing or empty.
+        if [ ! -s "$report" ]; then
           echo "No report to publish"
           exit 0
         fi
@@ -259,8 +216,8 @@ runs:
         printf '\nPublished care report to %s\n' "$url"
 
     - name: Gate on failing checks
-      # runs last so the report has already been uploaded and published; re-raises
-      # the care exit code captured during report generation.
+      # runs last so the report has already been published; re-raises the care exit
+      # code captured during the status run.
       if: always() && inputs.strict == 'true'
       shell: bash
       env:

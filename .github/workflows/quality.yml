@@ -20,7 +20,7 @@ env:
 jobs:
   # one flat gate: raw upstream checks on the single Go version from go.mod, then
   # run the stable released care on itself through our own action. id-token is
-  # needed to publish; upload only on main so PRs don't litter artifacts.
+  # needed to publish the report to the care dashboard.
   quality:
     runs-on: ubuntu-latest
     permissions:
@@ -51,4 +51,4 @@ jobs:
         with:
           version: ${{ steps.rel.outputs.tag }}
           output: report.care.json
-          upload: ${{ github.ref == 'refs/heads/main' }}
+          publish-url: https://code.toawe.me/ingest?kind=care
