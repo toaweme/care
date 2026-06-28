@@ -9,10 +9,11 @@ import (
 	"github.com/toaweme/http"
 )
 
-// Fetcher resolves a Source's bytes from its raw URL. It is deliberately host-
-// agnostic - a GET with an optional bearer credential - so the same code serves
-// github, gists, and any future provider that resolves to a fetchable URL.
-// Builtin sources have no URL and are resolved by the engine, not here.
+// Fetcher resolves a Source's bytes from its raw URL. It is deliberately
+// host-agnostic, doing a GET with an optional bearer credential, so the same
+// code serves github, gists, and any future provider that resolves to a
+// fetchable URL. Builtin sources have no URL and are resolved by the engine,
+// not here.
 type Fetcher interface {
 	Fetch(ctx context.Context, src Source) ([]byte, error)
 }

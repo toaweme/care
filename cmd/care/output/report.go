@@ -19,17 +19,17 @@ import (
 type RenderOptions struct {
 	Verbosity int
 	JSON      bool
-	// ExpandInstall prints the per-tool install phase as its own section. Off by
-	// default: the tool count is folded into the repo header instead.
+	// ExpandInstall prints the per-tool install phase as its own section. Off by default: the
+	// tool count is folded into the repo header instead.
 	ExpandInstall bool
 	// Grading is the health policy (weights + caps) the score is computed against.
 	// The zero value grades with the built-in defaults.
 	Grading rating.Config
 }
 
-// Render writes a run's outputs as JSON or a structured text report. It consumes
-// the phase-tagged Rendered stream the runner produces (install outputs then run
-// outputs); info carries the caller-resolved repo header for the JSON shape.
+// Render writes a run's outputs as JSON or a structured text report. It consumes the
+// phase-tagged Rendered stream the runner produces (install outputs then run outputs); info
+// carries the caller-resolved repo header for the JSON shape.
 func Render(outputs []care.Rendered, info RunInfo, opts RenderOptions) error {
 	if opts.JSON {
 		enc := json.NewEncoder(os.Stdout)
@@ -78,9 +78,9 @@ func renderPretty(outputs []care.Rendered, info RunInfo, opts RenderOptions) {
 	p.Newline()
 }
 
-// repoMeta builds a repo header's meta segments: the graded score + rating, the
-// colored pass/warn/fail/skip breakdown, the wall-clock duration, then the tool
-// count (unless install was expanded into its own section).
+// repoMeta builds a repo header's meta segments: the graded score + rating, the colored
+// pass/warn/fail/skip breakdown, the wall-clock duration, then the tool count (unless install
+// was expanded into its own section).
 func repoMeta(h Health, tools int) []string {
 	meta := []string{gradeMeta(h), statusMeta(tally{h.OK, h.Warn, h.Fail, h.Skip})}
 	if h.DurationMs > 0 {
@@ -92,8 +92,8 @@ func repoMeta(h Health, tools int) []string {
 	return meta
 }
 
-// gradeMeta renders the health grade as "B+ 88/100 needs-attention", colored by the
-// verdict tier so the headline reads at a glance.
+// gradeMeta renders the health grade as "B+ 88/100 needs-attention", colored by the verdict
+// tier so the headline reads at a glance.
 func gradeMeta(h Health) string {
 	style := gradeStyle(h.Verdict)
 	return style.Render(fmt.Sprintf("%s %d/100", h.Rating, h.Score)) + DimStyle.Render(" "+h.Verdict)
@@ -110,9 +110,9 @@ func gradeStyle(verdict string) lipgloss.Style {
 	}
 }
 
-// vcMeta renders the version-control identity line: branch, short commit, commit
-// count, dirty/clean, unpushed delta, and how long ago the tree was last touched
-// (dirty) or HEAD was committed (clean).
+// vcMeta renders the version-control identity line: branch, short commit, commit count,
+// dirty/clean, unpushed delta, and how long ago the tree was last touched (dirty) or HEAD was
+// committed (clean).
 func vcMeta(vc *VCInfo) string {
 	if vc == nil || vc.Branch == "" {
 		return ""
@@ -136,8 +136,8 @@ func vcMeta(vc *VCInfo) string {
 	if vc.HasUpstream && (vc.Ahead != 0 || vc.Behind != 0) {
 		parts = append(parts, fmt.Sprintf("+%d -%d", vc.Ahead, vc.Behind))
 	}
-	// a dirty tree reads by when it was last touched (active work); a clean tree by
-	// when it was last committed.
+	// a dirty tree reads by when it was last touched (active work); a clean tree by when it
+	// was last committed.
 	if vc.Dirty && vc.TouchedAt != nil {
 		parts = append(parts, "touched "+relativeTime(*vc.TouchedAt))
 	} else if vc.CommittedAt != nil {
@@ -154,8 +154,8 @@ func formatDuration(ms int64) string {
 	return fmt.Sprintf("%.1fs", float64(ms)/1000)
 }
 
-// relativeTime renders how long ago t was, coarsely (the report header wants "2h
-// ago", not a precise span).
+// relativeTime renders how long ago t was, coarsely (the report header wants "2h ago", not a
+// precise span).
 func relativeTime(t time.Time) string {
 	d := time.Since(t)
 	switch {
@@ -173,9 +173,9 @@ func relativeTime(t time.Time) string {
 // tally counts run outcomes for a header or footer summary.
 type tally struct{ ok, warn, fail, skip int }
 
-// statusMeta renders a tally as a colored, comma-separated breakdown that names
-// what each count is ("6 passed, 2 failed"), so the numbers are never ambiguous.
-// Zero categories are omitted.
+// statusMeta renders a tally as a colored, comma-separated breakdown that names what each
+// count is ("6 passed, 2 failed"), so the numbers are never ambiguous. Zero categories are
+// omitted.
 func statusMeta(t tally) string {
 	var parts []string
 	if t.ok > 0 {
@@ -204,10 +204,9 @@ func plural(n int, singular, plural string) string {
 	return fmt.Sprintf("%d %s", n, plural)
 }
 
-// renderChecks renders one repo's features (passing first, failures last). Each
-// feature is one row labeled by its name; a composite feature's sub-checks expand
-// into its item rows. Order is stable because the runner delivers outputs sorted
-// before this re-sorts by status.
+// renderChecks renders one repo's features (passing first, failures last). Each feature is one
+// row labeled by its name; a composite feature's sub-checks expand into its item rows. Order is
+// stable because the runner delivers outputs sorted before this re-sorts by status.
 func renderChecks(p *Pretty, checks []care.Rendered, opts RenderOptions) {
 	width := labelWidth(checks, rowLabel)
 
@@ -217,14 +216,14 @@ func renderChecks(p *Pretty, checks []care.Rendered, opts RenderOptions) {
 	}
 }
 
-// featureLabel humanizes a feature id into its display label ("version_control" ->
-// "version control").
+// featureLabel humanizes a feature id into its display label
+// ("version_control" -> "version control").
 func featureLabel(feature string) string {
 	return strings.ReplaceAll(feature, "_", " ")
 }
 
-// rowLabel is a check's display label: its humanized feature, suffixed with the
-// run-profile when it ran under a named (non-default) one, e.g. "tests (race)".
+// rowLabel is a check's display label: its humanized feature, suffixed with the run-profile
+// when it ran under a named (non-default) one, e.g. "tests (race)".
 func rowLabel(o care.Rendered) string {
 	label := featureLabel(o.Feature())
 	if p := profileLabel(o.Profile()); p != "" {

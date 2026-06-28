@@ -21,7 +21,7 @@ func (gistProvider) Resolve(spec string) (Source, bool, error) {
 	u := ensureScheme(spec)
 	// a gist.github.com web URL points at the gist page; its raw counterpart on
 	// gist.githubusercontent.com serves the file. A gist.githubusercontent.com URL
-	// is already raw - fetch it verbatim.
+	// is already raw, so fetch it verbatim.
 	if strings.Contains(u, "gist.github.com/") {
 		u = strings.Replace(u, "gist.github.com/", rawGistHost+"/", 1)
 		if !strings.Contains(u, "/raw") {

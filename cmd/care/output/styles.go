@@ -18,9 +18,9 @@ var (
 	ErrorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("1"))
 
-	// concrete mid-gray (256-color 245) rather than ANSI palette 8: index 8 is
-	// remapped per-terminal and iTerm2 renders it near-black, which disappears
-	// under window transparency. A fixed gray stays muted but readable anywhere.
+	// concrete mid-gray (256-color 245) rather than ANSI palette 8: index 8 is remapped
+	// per-terminal and iTerm2 renders it near-black, which disappears under window
+	// transparency. A fixed gray stays muted but readable anywhere.
 	DimStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("245"))
 )

@@ -12,7 +12,7 @@ const (
 	kindEmbed              // an embedded template, bytes already in hand
 )
 
-// Source is a resolved sync source. It is provider-agnostic - the host-specific
+// Source is a resolved sync source. It is provider-agnostic: the host-specific
 // work happens in a Provider, so adding gitlab/gitea/bitbucket later needs no
 // change here or in the fetcher.
 type Source struct {
@@ -75,7 +75,7 @@ func (s Source) String() string {
 }
 
 // Provider resolves a source spec into a Source. The engine runs the providers in
-// order - local filesystem, embedded templates, then the remote host families -
+// order (local filesystem, embedded templates, then the remote host families),
 // and a provider returns false to mean "not mine, try the next one".
 type Provider interface {
 	Name() string

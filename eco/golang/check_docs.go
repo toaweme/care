@@ -13,10 +13,9 @@ import (
 	"github.com/toaweme/care"
 )
 
-// DefaultDocCoverage is the doc-comment coverage below which the docs check warns
-// when an operator has not configured their own `checks.docs.options.min`. To silence
-// the check entirely, disable it (`checks.docs.disabled: true`) rather than setting a
-// zero threshold.
+// DefaultDocCoverage is the doc-comment coverage below which the docs check warns when an
+// operator has not configured their own `checks.docs.options.min`. To silence the check
+// entirely, disable it (`checks.docs.disabled: true`) rather than setting a zero threshold.
 const DefaultDocCoverage = 80
 
 type docsCheck struct {

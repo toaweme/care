@@ -23,8 +23,8 @@ func (p *Pretty) Section(title string, meta ...string) {
 	fmt.Println(line.String())
 }
 
-// SubHeader prints a dim line beneath a section header (the version-control
-// identity line), indented to sit under the section title.
+// SubHeader prints a dim line beneath a section header (the version-control identity line),
+// indented to sit under the section title.
 func (p *Pretty) SubHeader(text string) {
 	fmt.Println(DimStyle.Render("  ") + text)
 }
@@ -45,19 +45,17 @@ func (p *Pretty) CheckRow(icon, label string, labelWidth int, detail string) {
 	fmt.Printf("%s %s  %s\n", icon, padRight(label, labelWidth), DimStyle.Render(detail))
 }
 
-// subRowIndent is the fixed indent of an expanded check's item rows: enough to sit
-// them under the check label (past the "icon " spine) and read as a group, but not
-// aligned to the variable, often-wide label column, so the rows keep the full
-// terminal width for their content.
+// subRowIndent is the fixed indent of an expanded check's item rows: enough to sit them under
+// the check label (past the "icon " spine) and read as a group, but not aligned to the
+// variable, often-wide label column, so the rows keep the full terminal width for their content.
 const subRowIndent = 2
 
-// ItemRows prints a check's expanded item rows beneath its summary line, indented
-// by subRowIndent. When the rows use the blank-first-cell convention (a leading
-// column repeated across consecutive rows, blanked on repeat - as the lint check
-// does per file), it switches to grouped layout: the shared key gets its own line
-// and its rows nest under it, so a wide key column (a file path) no longer pushes
-// every message to a fixed far-right gutter. Otherwise the rows render flat,
-// column-aligned.
+// ItemRows prints a check's expanded item rows beneath its summary line, indented by
+// subRowIndent. When the rows use the blank-first-cell convention (a leading column repeated
+// across consecutive rows, blanked on repeat - as the lint check does per file), it switches
+// to grouped layout: the shared key gets its own line and its rows nest under it, so a wide
+// key column (a file path) no longer pushes every message to a fixed far-right gutter.
+// Otherwise the rows render flat, column-aligned.
 func (p *Pretty) ItemRows(rows [][]string) {
 	if len(rows) == 0 {
 		return
@@ -74,10 +72,10 @@ func (p *Pretty) ItemRows(rows [][]string) {
 	}
 }
 
-// isGrouped reports whether the rows use the blank-first-cell convention: a
-// multi-column block where a later row leaves its first cell empty to continue the
-// previous row's group (the lint check blanks the file path on repeats). Flat
-// blocks, where every row carries a distinct first cell, are left alone.
+// isGrouped reports whether the rows use the blank-first-cell convention: a multi-column block
+// where a later row leaves its first cell empty to continue the previous row's group (the lint
+// check blanks the file path on repeats). Flat blocks, where every row carries a distinct first
+// cell, are left alone.
 func isGrouped(rows [][]string) bool {
 	for i, r := range rows {
 		if i > 0 && len(r) > 1 && r[0] == "" {
@@ -87,10 +85,9 @@ func isGrouped(rows [][]string) bool {
 	return false
 }
 
-// groupedRows renders the blank-first-cell convention as nested groups: a row with
-// a non-empty first cell starts a group (its key on its own line at base indent),
-// and every row's remaining cells render as a member one level deeper, aligned
-// across the whole block.
+// groupedRows renders the blank-first-cell convention as nested groups: a row with a non-empty
+// first cell starts a group (its key on its own line at base indent), and every row's remaining
+// cells render as a member one level deeper, aligned across the whole block.
 func (p *Pretty) groupedRows(rows [][]string, base string) {
 	member := base + strings.Repeat(" ", subRowIndent)
 	widths := colWidths(rows, 1)
@@ -104,9 +101,9 @@ func (p *Pretty) groupedRows(rows [][]string, base string) {
 	}
 }
 
-// colWidths returns the display width of each column across rows, considering only
-// cells from index `from` onward (so grouped layout can measure the member columns
-// while ignoring the group-key column).
+// colWidths returns the display width of each column across rows, considering only cells from
+// index `from` onward (so grouped layout can measure the member columns while ignoring the
+// group-key column).
 func colWidths(rows [][]string, from int) []int {
 	cols := 0
 	for _, r := range rows {
@@ -128,11 +125,10 @@ func colWidths(rows [][]string, from int) []int {
 	return widths
 }
 
-// renderCells lays out one item row: every cell but the last is padded to its
-// column width, the first cell is plain and the rest dim. The final cell is
-// emitted in full and never truncated, so an over-long message (a golangci
-// diagnostic, say) is left for the terminal to soft-wrap rather than being clipped
-// at a fixed column the user cannot widen past.
+// renderCells lays out one item row: every cell but the last is padded to its column width,
+// the first cell is plain and the rest dim. The final cell is emitted in full and never
+// truncated, so an over-long message (a golangci diagnostic, say) is left for the terminal to
+// soft-wrap rather than being clipped at a fixed column the user cannot widen past.
 func renderCells(cells []string, widths []int) string {
 	var b strings.Builder
 	for i, c := range cells {

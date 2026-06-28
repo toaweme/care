@@ -29,38 +29,38 @@ var (
 	_ care.Profiled  = (*benchmarkCheck)(nil)
 )
 
-// NewBenchmark runs the repo's benchmarks (`go test -bench`) through the injected
-// go tool and reports each benchmark's throughput and allocations under the active
-// run-profile (a profile can vary -benchtime, -count, -cpu, build tags). profiles
-// configures the named flag-sets to run; an empty list runs once with defaults.
-// Benchmark numbers never fail the run; only a benchmark run that errors out does.
+// NewBenchmark runs the repo's benchmarks (`go test -bench`) through the injected go tool
+// and reports each benchmark's throughput and allocations under the active run-profile.
+// A profile can vary -benchtime, -count, -cpu, and build tags; profiles selects the named
+// flag-sets to run, and an empty list runs once with defaults. Benchmark numbers never fail
+// the run; only a benchmark run that errors out does.
 //
-// `go test -bench` has no machine-readable form (even under -json the figures
-// arrive as text in Output events), so this is the one feature that parses tool
-// stdout rather than structured JSON.
+// `go test -bench` has no machine-readable form (even under -json the figures arrive as
+// text in Output events), so this is the one feature that parses tool stdout rather than
+// structured JSON.
 func NewBenchmark(tool care.Tool, profiles []care.RunProfile) care.Benchmark {
 	return &benchmarkCheck{BaseCheck: care.NewBaseCheck("go-test-bench", tool), tool: tool, profiles: profiles}
 }
 
-// Applies skips a repo with no benchmark functions outright, since `go test -bench`
-// otherwise compiles every test binary just to discover there is nothing to run -
-// which would bill a multi-second SKIP. It detects benchmarks by a cheap source
-// scan (no compilation) rather than running the tool.
+// Applies skips a repo with no benchmark functions outright. Otherwise `go test -bench`
+// compiles every test binary just to discover there is nothing to run, billing a
+// multi-second SKIP, so benchmarks are detected by a cheap source scan (no compilation)
+// rather than by running the tool.
 func (f *benchmarkCheck) Applies(dir string) bool {
 	return hasGoMod(dir) && hasBenchmarks(dir)
 }
 
 // benchFuncRe matches a top-level benchmark function declaration. Benchmarks must be
-// `func BenchmarkXxx(...)` at file scope, so anchoring to the start of a line keeps
-// occurrences in comments or strings (which are indented) from matching.
+// `func BenchmarkXxx(...)` at file scope, so anchoring to the start of a line keeps the
+// indented occurrences inside comments or strings from matching.
 var benchFuncRe = regexp.MustCompile(`(?m)^func Benchmark`)
 
 // errStopWalk halts the directory walk as soon as the first benchmark is found.
 var errStopWalk = errors.New("benchmark found")
 
-// hasBenchmarks reports whether any _test.go file under dir declares a benchmark,
-// walking the tree (skipping vendor/testdata and dot dirs) and stopping at the first
-// hit. It reads files but never compiles, so it is cheap even on a large module.
+// hasBenchmarks reports whether any _test.go file under dir declares a benchmark. It
+// walks the tree (skipping vendor, testdata, and dot dirs) and stops at the first hit,
+// reading files but never compiling, so it is cheap even on a large module.
 func hasBenchmarks(dir string) bool {
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -75,8 +75,8 @@ func hasBenchmarks(dir string) bool {
 		if !strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		// scanning the working tree of a repo the operator pointed care at; a symlink
-		// TOCTOU race has no attacker and no privilege to escalate to here.
+		// this scans the working tree of a repo the operator pointed care at, where a
+		// symlink TOCTOU race has no attacker and no privilege to escalate to.
 		//nolint:gosec // G122: read-only local scan of a trusted working tree
 		if b, err := os.ReadFile(path); err == nil && benchFuncRe.Match(b) {
 			return errStopWalk

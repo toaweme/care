@@ -14,27 +14,26 @@ import (
 	"github.com/toaweme/care/eco/shared/sync"
 )
 
-// GetLintConfig configures the lint scaffolding subcommand: the shared sync
-// flags plus the lint-only import-sort prefixes. With no --from the canonical
-// golangci config is rendered from the bundled template; --from pulls it from a
-// source verbatim (no placeholder expansion).
+// GetLintConfig configures the lint scaffolding subcommand: the shared sync flags plus the
+// lint-only import-sort prefixes. With no --from the canonical golangci config is rendered
+// from the bundled template; --from pulls it from a source verbatim (no placeholder expansion).
 type GetLintConfig struct {
 	GetConfig
 	ImportSortPrefixes []string `arg:"isp" short:"i" sep:"," env:"CARE_GET_IMPORT_SORT_PREFIXES" help:"Import path prefixes grouped right after stdlib (goimports local-prefixes); comma-separated. Defaults to the repo's module path. Ignored with --from"`
 }
 
-// GetLintCommand writes a golangci-lint config into the current repository.
-// Without --from it renders the canonical bundled config (expanding the goimports
-// local-prefixes placeholder); with --from it syncs a config from a source
-// verbatim. When a config already governs the dir (here or in a parent, as
-// golangci-lint resolves upward) it reports and skips unless --force is passed.
+// GetLintCommand writes a golangci-lint config into the current repository. Without --from it
+// renders the canonical bundled config (expanding the goimports local-prefixes placeholder);
+// with --from it syncs a config from a source verbatim. When a config already governs the dir
+// (here or in a parent, as golangci-lint resolves upward) it reports and skips unless --force
+// is passed.
 type GetLintCommand struct {
 	cli.BaseCommand[GetLintConfig]
 	client http.Client
 	// embed reads the bundled templates by name.
 	embed sync.EmbedFunc
-	// module resolves the repo's module path so the goimports local-prefixes
-	// placeholder can be pinned to it. Returns "" when the dir is not a Go module.
+	// module resolves the repo's module path so the goimports local-prefixes placeholder can
+	// be pinned to it. Returns "" when the dir is not a Go module.
 	module func(dir string) string
 }
 
@@ -51,8 +50,8 @@ func (c *GetLintCommand) Help() string {
 	return "Write a golangci-lint config into the current repo: the canonical bundled config by default, or one synced from --from (a local path, bundled template name, or github/gist url). Reports and skips when a config already governs the dir (--force to overwrite)."
 }
 
-// Run writes a golangci-lint config into the current repo, rendering the bundled
-// template or syncing one from --from, skipping when a config already governs the dir.
+// Run writes a golangci-lint config into the current repo, rendering the bundled template
+// or syncing one from --from, skipping when a config already governs the dir.
 func (c *GetLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	dir := options.Cwd
 
@@ -62,8 +61,8 @@ func (c *GetLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 		return nil
 	}
 
-	// the shared --out has no default; lint writes the canonical filename unless
-	// the operator points it elsewhere.
+	// the shared --out has no default; lint writes the canonical filename unless the operator
+	// points it elsewhere.
 	out := c.Inputs.Out
 	if out == "" {
 		out = golang.GolangciConfigName
@@ -84,8 +83,8 @@ func (c *GetLintCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	return nil
 }
 
-// resolve returns the config bytes and a one-line source description, either from
-// a remote --from source or the rendered builtin template.
+// resolve returns the config bytes and a one-line source description, either from a remote
+// --from source or the rendered builtin template.
 func (c *GetLintCommand) resolve(dir, dst string) ([]byte, string, error) {
 	if c.Inputs.From != "" {
 		engine := sync.NewEngine(sync.NewFetcher(c.client, c.Inputs.Token), c.embed)
@@ -100,8 +99,8 @@ func (c *GetLintCommand) resolve(dir, dst string) ([]byte, string, error) {
 		return content, "source: " + src.String(), nil
 	}
 
-	// explicit --isp wins; otherwise fall back to the repo's module path, leaving the
-	// block empty (dropped) when neither is available.
+	// explicit --isp wins; otherwise fall back to the repo's module path, leaving the block
+	// empty (dropped) when neither is available.
 	prefixes := c.Inputs.ImportSortPrefixes
 	if len(prefixes) == 0 && c.module != nil {
 		if module := c.module(dir); module != "" {

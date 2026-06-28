@@ -22,14 +22,15 @@ type runtimeCheck struct {
 
 var _ care.Runtime = (*runtimeCheck)(nil)
 
-// NewRuntime is the Runtime feature for Go: it reports the module's `go` directive
-// against the lowest it could declare, max(code floor, dependency floor). Go is
-// backwards-compatible, so it fills only the minimum; there is no maximum. The
-// dependency floor is read from the local module cache (never downloaded) and the
-// code floor from the minver scan; both stay silent when they cannot be
-// authoritative. The check is purely informational - it always passes (weight-0 in
-// the rating engine), surfacing the version facts and a "(min X)" hint when the
-// directive could drop, but never warning or failing on its own.
+// NewRuntime is the Runtime feature for Go: it reports the module's `go` directive against
+// the lowest it could declare, max(code floor, dependency floor). Go is backwards-compatible,
+// so it fills only the minimum; there is no maximum. The dependency floor is read from the
+// local module cache (never downloaded) and the code floor from the minver scan; both stay
+// silent when they cannot be authoritative.
+//
+// The check is purely informational: it always passes (weight-0 in the rating engine),
+// surfacing the version facts and a "(min X)" hint when the directive could drop, but never
+// warning or failing on its own.
 func NewRuntime(tool care.Tool) care.Runtime {
 	return &runtimeCheck{BaseCheck: care.NewBaseCheck("go-runtime", tool), tool: tool}
 }
@@ -56,8 +57,8 @@ func (f *runtimeCheck) Run(ctx context.Context, dir string, _ care.RunOptions) c
 
 	// the dependency floor is shown as labeled context (why the declared version
 	// can't go lower); the dependency data itself (which module, the per-dep table)
-	// lives on the Dependencies check. Reducibility needs a provable floor: a
-	// complete cache (exact, not a lower bound) and a known code requirement.
+	// lives on the Dependencies check. Reducibility needs a provable floor: a complete
+	// cache (exact, not a lower bound) and a known code requirement.
 	floor, ferr := gomod.ReadDepFloor(dir, goModCache(ctx, f.tool, dir))
 	if ferr == nil {
 		report.Version.DependencyFloor = floor.Version

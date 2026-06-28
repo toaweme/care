@@ -8,9 +8,9 @@ import (
 	"github.com/toaweme/care/internal/rating"
 )
 
-// Test_BuildJSON_SingleRepo checks the single-repo wire shape: a flat check list
-// under one header (author + created), each check keyed by its type/feature, install
-// outputs lifted into Tools, and a check's typed payload carried as Data.
+// Test_BuildJSON_SingleRepo checks the single-repo wire shape: a flat check list under one
+// header (author + created), each check keyed by its type/feature, install outputs lifted into
+// Tools, and a check's typed payload carried as Data.
 func Test_BuildJSON_SingleRepo(t *testing.T) {
 	outputs := []care.Rendered{
 		care.InstallResult("golangci-lint", care.StatusOK, "present"),
@@ -48,8 +48,8 @@ func Test_BuildJSON_SingleRepo(t *testing.T) {
 	}
 }
 
-// Test_ToolID checks the tools-array identity: the resolved version embeds in the
-// tool name, and a versionless tool stays bare.
+// Test_ToolID checks the tools-array identity: the resolved version embeds in the tool name,
+// and a versionless tool stays bare.
 func Test_ToolID(t *testing.T) {
 	if got := toolID("betterleaks", "8.18.2"); got != "betterleaks:8.18.2" {
 		t.Errorf("toolID with version = %q, want betterleaks:8.18.2", got)
@@ -70,8 +70,8 @@ func Test_SourceID(t *testing.T) {
 	}
 }
 
-// Test_BuildJSON_Module checks that the repo header carries the caller-resolved
-// module, independent of any check payload.
+// Test_BuildJSON_Module checks that the repo header carries the caller-resolved module,
+// independent of any check payload.
 func Test_BuildJSON_Module(t *testing.T) {
 	outputs := []care.Rendered{
 		care.Result(care.FeatureTests, "go-test", "/src/repoA", care.StatusOK,

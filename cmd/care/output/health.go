@@ -6,10 +6,9 @@ import (
 	"github.com/toaweme/care/internal/rating"
 )
 
-// Health is the run's headline: a graded score + letter rating on top of the raw
-// status tally, the run's wall-clock cost and its bottleneck, and the key metrics
-// promoted out of individual check payloads so a consumer reads them off the top
-// without decoding each check's data.
+// Health is the run's headline: a graded score + letter rating on top of the raw status tally,
+// the run's wall-clock cost and its bottleneck, and the key metrics promoted out of individual
+// check payloads so a consumer reads them off the top without decoding each check's data.
 type Health struct {
 	Score   int    `json:"score"`
 	Rating  string `json:"rating"`
@@ -26,15 +25,15 @@ type Health struct {
 	Metrics Metrics `json:"metrics"`
 }
 
-// Slowest is the single longest-running check, the run's bottleneck. Checks run in
-// parallel, so this is the wall-clock floor, not the sum of all check durations.
+// Slowest is the single longest-running check, the run's bottleneck. Checks run in parallel,
+// so this is the wall-clock floor, not the sum of all check durations.
 type Slowest struct {
 	Feature    string `json:"feature"`
 	DurationMs int64  `json:"duration_ms"`
 }
 
-// Metrics are the health numbers lifted from individual check payloads to the
-// header, where a dashboard reads them directly instead of decoding each check.
+// Metrics are the health numbers lifted from individual check payloads to the header, where a
+// dashboard reads them directly instead of decoding each check.
 type Metrics struct {
 	Coverage *float64    `json:"coverage,omitempty"`
 	Vulns    int         `json:"vulns"`
@@ -50,9 +49,9 @@ type TestMetric struct {
 	Total  int `json:"total"`
 }
 
-// buildHealth rolls the run-phase outputs into the health headline: the status
-// tally, the rating-engine grade, the slowest check, and the promoted metrics.
-// durationMs is the run's wall-clock, measured by the caller around the runner.
+// buildHealth rolls the run-phase outputs into the health headline: the status tally, the
+// rating-engine grade, the slowest check, and the promoted metrics. durationMs is the run's
+// wall-clock, measured by the caller around the runner.
 func buildHealth(runs []care.Rendered, durationMs int64, grading rating.Config) Health {
 	h := Health{DurationMs: durationMs}
 

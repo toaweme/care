@@ -38,7 +38,8 @@ type Options struct {
 	Args     []string
 }
 
-// NewRunner creates a GoTestRunner configured from the given Options.
+// NewRunner returns a GoTestRunner that runs `go test ./... -json` with the race,
+// coverage, build-tag, and extra-flag settings carried by opts.
 func NewRunner(opts Options) *GoTestRunner {
 	return &GoTestRunner{race: opts.Race, coverage: opts.Coverage, tags: opts.Tags, args: opts.Args}
 }

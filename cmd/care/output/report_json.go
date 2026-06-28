@@ -10,10 +10,10 @@ import (
 	"github.com/toaweme/care/internal/rating"
 )
 
-// RunInfo is the repo context the caller resolves once and the renderer stamps onto
-// the report header: when the report was produced, the repo dir, its module /
-// project identity, the version-control state, and the run's wall-clock cost. The
-// module and VC identity are resolved at the caller (never from a payload).
+// RunInfo is the repo context the caller resolves once and the renderer stamps onto the report
+// header: when the report was produced, the repo dir, its module / project identity, the
+// version-control state, and the run's wall-clock cost. The module and VC identity are resolved
+// at the caller (never from a payload).
 type RunInfo struct {
 	Created    time.Time
 	Repo       string
@@ -22,15 +22,15 @@ type RunInfo struct {
 	DurationMs int64
 }
 
-// VCInfo is the repo's version-control identity for the report header: the current
-// branch and commit, the total commit count on HEAD, whether the tree is dirty, the
-// upstream sync state, when HEAD was committed, and when the working tree was last
-// touched. TouchedAt is the newest uncommitted-file mtime, the repo-level "last
-// worked on" signal; it is absent when the tree is clean.
+// VCInfo is the repo's version-control identity for the report header: the current branch and
+// commit, the total commit count on HEAD, whether the tree is dirty, the upstream sync state,
+// when HEAD was committed, and when the working tree was last touched. TouchedAt is the newest
+// uncommitted-file mtime, the repo-level "last worked on" signal; it is absent when the tree is
+// clean.
 type VCInfo struct {
 	Branch string `json:"branch,omitempty"`
-	// Tag is the release tag at HEAD, absent when HEAD is not tagged. It is the
-	// release identity for a tagged CI build, where Branch is unavailable.
+	// Tag is the release tag at HEAD, absent when HEAD is not tagged. It is the release
+	// identity for a tagged CI build, where Branch is unavailable.
 	Tag    string `json:"tag,omitempty"`
 	Commit string `json:"commit,omitempty"`
 	// CommitFull is the full 40-char HEAD SHA; Commit is its short form.
@@ -42,15 +42,14 @@ type VCInfo struct {
 	Behind      int        `json:"behind,omitempty"`
 	CommittedAt *time.Time `json:"committed_at,omitempty"`
 	TouchedAt   *time.Time `json:"touched_at,omitempty"`
-	// LinesAdded / LinesDeleted are the repo's total uncommitted line delta against
-	// HEAD, the quick "how much is in flight" signal for a dashboard.
+	// LinesAdded / LinesDeleted are the repo's total uncommitted line delta against HEAD, the
+	// quick "how much is in flight" signal for a dashboard.
 	LinesAdded   int `json:"lines_added,omitempty"`
 	LinesDeleted int `json:"lines_deleted,omitempty"`
 }
 
-// ToolResult is one install-phase tool outcome: the resolved tool identity, its
-// status, how it is provisioned (Source: brew / goinstall / builtin), and the short
-// install state text.
+// ToolResult is one install-phase tool outcome: the resolved tool identity, its status, how it
+// is provisioned (Source: brew / goinstall / builtin), and the short install state text.
 type ToolResult struct {
 	Tool       string `json:"tool"`
 	Status     string `json:"status"`
@@ -59,10 +58,10 @@ type ToolResult struct {
 	DurationMs int64  `json:"duration_ms"`
 }
 
-// Check is one feature's result against the repo: its umbrella Type, the
-// Feature (capability) checked, the Tool that ran it, the status, and the typed
-// payload. Data is the single structured contract; any table a UI renders is derived
-// from it. A consumer decodes Data by the Feature it is keyed to.
+// Check is one feature's result against the repo: its umbrella Type, the Feature (capability)
+// checked, the Tool that ran it, the status, and the typed payload. Data is the single
+// structured contract; any table a UI renders is derived from it. A consumer decodes Data by
+// the Feature it is keyed to.
 type Check struct {
 	Type       string `json:"type"`
 	Feature    string `json:"feature"`
@@ -73,9 +72,9 @@ type Check struct {
 	Data       any    `json:"data,omitempty"`
 }
 
-// Report is care's public JSON wire shape: a single repo's checks under a flat header,
-// the shared install-phase tools, and a graded health headline. Author is the
-// generating tool ("care"); a version embeds in it ("care:1.1") only if ever needed.
+// Report is care's public JSON wire shape: a single repo's checks under a flat header, the
+// shared install-phase tools, and a graded health headline. Author is the generating tool
+// ("care"); a version embeds in it ("care:1.1") only if ever needed.
 type Report struct {
 	Author         string       `json:"author"`
 	Created        string       `json:"created,omitempty"`
@@ -87,9 +86,9 @@ type Report struct {
 	Checks         []Check      `json:"checks"`
 }
 
-// buildJSON shapes the phase-tagged output stream into the wire format: install
-// outputs become Tools, run outputs become Checks and feed the graded Health
-// headline, and the repo header comes from the caller-resolved RunInfo.
+// buildJSON shapes the phase-tagged output stream into the wire format: install outputs become
+// Tools, run outputs become Checks and feed the graded Health headline, and the repo header
+// comes from the caller-resolved RunInfo.
 func buildJSON(outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
 	rep := Report{Author: "care", Dir: info.Repo, Module: info.Module, VersionControl: info.VC, Checks: []Check{}}
 	if !info.Created.IsZero() {
@@ -114,9 +113,9 @@ func buildJSON(outputs []care.Rendered, info RunInfo, grading rating.Config) Rep
 	return rep
 }
 
-// BuildReport shapes a run's outputs into the public JSON report. It is the exported
-// entry point for callers that write the report themselves (e.g. to a file) rather
-// than through Render.
+// BuildReport shapes a run's outputs into the public JSON report. It is the exported entry
+// point for callers that write the report themselves (e.g. to a file) rather than through
+// Render.
 func BuildReport(outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
 	return buildJSON(outputs, info, grading)
 }
@@ -146,12 +145,12 @@ func WriteReportFile(path string, rep Report) error {
 	return nil
 }
 
-// AmendReport merges a fast incremental run's outputs into an existing report: it
-// refreshes the caller-resolved header (created stamp, version_control), replaces
-// each re-run check in place (matched by feature+profile, appended when new), and
-// re-grades health from the merged check set. The promoted metrics, run duration and
-// slowest check from the last full run are preserved, since a fast pass does not
-// recompute them. The install-phase tools are left untouched.
+// AmendReport merges a fast incremental run's outputs into an existing report: it refreshes the
+// caller-resolved header (created stamp, version_control), replaces each re-run check in place
+// (matched by feature+profile, appended when new), and re-grades health from the merged check
+// set. The promoted metrics, run duration and slowest check from the last full run are
+// preserved, since a fast pass does not recompute them. The install-phase tools are left
+// untouched.
 func AmendReport(existing Report, outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
 	rep := existing
 	if !info.Created.IsZero() {
@@ -191,10 +190,10 @@ func indexOfCheck(checks []Check, feature, profile string) int {
 	return -1
 }
 
-// regrade recomputes the status tally and the rating-engine grade from a merged set
-// of wire checks, preserving the metrics/duration/slowest carried on prev (a fast
-// pass does not recompute those). Each check's outcome is re-derived from its status
-// string, the inverse of Status.String().
+// regrade recomputes the status tally and the rating-engine grade from a merged set of wire
+// checks, preserving the metrics/duration/slowest carried on prev (a fast pass does not
+// recompute those). Each check's outcome is re-derived from its status string, the inverse of
+// Status.String().
 func regrade(prev Health, checks []Check, grading rating.Config) Health {
 	h := prev
 	h.OK, h.Warn, h.Fail, h.Skip = 0, 0, 0, 0
@@ -218,8 +217,8 @@ func regrade(prev Health, checks []Check, grading rating.Config) Health {
 	return h
 }
 
-// outcomeOf maps a wire status string back onto the rating engine's Outcome, the
-// inverse of care.Status.String().
+// outcomeOf maps a wire status string back onto the rating engine's Outcome, the inverse of
+// care.Status.String().
 func outcomeOf(status string) rating.Outcome {
 	switch status {
 	case care.StatusOK.String():
@@ -245,8 +244,8 @@ func checkOf(o care.Rendered) Check {
 	}
 }
 
-// profileLabel returns the run-profile name to display, or "" for the implicit
-// default (an unnamed or "default" profile is the unlabeled one).
+// profileLabel returns the run-profile name to display, or "" for the implicit default (an
+// unnamed or "default" profile is the unlabeled one).
 func profileLabel(name string) string {
 	if name == "default" {
 		return ""
@@ -254,9 +253,8 @@ func profileLabel(name string) string {
 	return name
 }
 
-// typeOf groups a feature under its umbrella type for the wire (security|quality|
-// tests|repo). This grouping is purely a wire concern, so it lives here and not in
-// the core.
+// typeOf groups a feature under its umbrella type for the wire (security|quality|tests|repo).
+// This grouping is purely a wire concern, so it lives here and not in the core.
 func typeOf(feature string) string {
 	switch feature {
 	case care.FeatureSecrets, care.FeatureVulnerabilities:
@@ -272,8 +270,8 @@ func typeOf(feature string) string {
 	}
 }
 
-// toolID renders a tool's identity for the tools array, embedding the resolved
-// version when known ("betterleaks:8.18.2"), bare otherwise.
+// toolID renders a tool's identity for the tools array, embedding the resolved version when
+// known ("betterleaks:8.18.2"), bare otherwise.
 func toolID(name, version string) string {
 	if version == "" {
 		return name
@@ -281,8 +279,8 @@ func toolID(name, version string) string {
 	return name + ":" + version
 }
 
-// sourceID maps a tool's Installer const onto the wire source value. go-install
-// reads as "goinstall" on the wire; brew and builtin pass through.
+// sourceID maps a tool's Installer const onto the wire source value. go-install reads as
+// "goinstall" on the wire; brew and builtin pass through.
 func sourceID(installer string) string {
 	switch installer {
 	case string(care.InstallerGo):

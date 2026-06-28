@@ -155,7 +155,7 @@ func issueLoc(is QualityIssue) string {
 }
 
 // DepsReport is the dependency-graph state for one repo: hygiene findings (module
-// not tidy, replace directives, failed verification) plus what the graph demands -
+// not tidy, replace directives, failed verification) plus what the graph demands:
 // the runtime-version floor the dependencies force (RuntimeFloor, set by
 // RuntimeFloorBy) and the per-dependency runtime versions (Deps, verbose only).
 type DepsReport struct {
@@ -216,10 +216,10 @@ func (r DepsReport) Rows(verbosity int) [][]string {
 }
 
 // RuntimeReport is the execution environment a project targets and what its own
-// code needs - not what its dependencies demand, which is DepsReport. It is
-// language-agnostic: an ecosystem fills only the parts it has. Go fills the version
-// floor and the toolchain; Node additionally fills the module system and platform
-// targets.
+// code needs, as opposed to what its dependencies demand (that is DepsReport). It
+// is language-agnostic: an ecosystem fills only the parts it has. Go fills the
+// version floor and the toolchain; Node additionally fills the module system and
+// platform targets.
 type RuntimeReport struct {
 	// Version is the declared language version against what the code actually needs.
 	Version RuntimeVersion `json:"version"`
@@ -272,9 +272,9 @@ type RuntimeTargets struct {
 	Platforms []string `json:"platforms,omitempty"`
 }
 
-// Bound is a version range [Min, Max]. An empty Max means unbounded - as Go always
-// is, being backwards-compatible, so a Go bound never carries a Max; a language that
-// removes features (or declares an upper engines bound) fills it.
+// Bound is a version range [Min, Max]. An empty Max means unbounded: Go, being
+// backwards-compatible, never sets one, so a Go bound carries only a Min; a language
+// that removes features (or declares an upper engines bound) fills the Max.
 type Bound struct {
 	Min string `json:"min,omitempty"`
 	Max string `json:"max,omitempty"`
@@ -845,9 +845,10 @@ func (r DocsReport) Summary(int) string {
 	return fmt.Sprintf("%.0f%% documented (%d/%d, %d undocumented)", pct, r.Documented, r.Total, len(r.Missing))
 }
 
-// Rows is intentionally empty: docs reports general stats only (the Summary), never
-// the per-symbol list, which would flood the terminal. The full undocumented set
-// still rides on the JSON payload for machine consumers.
+// Rows returns the undocumented-symbol list only at -vv, grouped by file. Below
+// that it returns nothing: coverage is a single headline stat (the Summary), and
+// the full per-symbol list would flood the terminal, so it rides on the JSON
+// payload for machine consumers instead.
 func (r DocsReport) Rows(verbosity int) [][]string {
 	// the summary carries the coverage stats; the per-symbol undocumented list is
 	// exhaustive detail, shown only at -vv, grouped by file (blank-first-cell).

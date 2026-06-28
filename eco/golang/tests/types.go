@@ -60,7 +60,7 @@ type FuncCoverage struct {
 	Coverage float64
 }
 
-// Runner executes tests and collects results.
+// Runner runs a module's test suite in dir and returns the parsed Report.
 type Runner interface {
 	Run(ctx context.Context, dir string) (Report, error)
 }

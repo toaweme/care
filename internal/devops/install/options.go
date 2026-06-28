@@ -83,7 +83,8 @@ func (d httpDownloader) Download(ctx context.Context, url string, w io.Writer) e
 	return nil
 }
 
-// execRunner shells out to the real process tree.
+// execRunner runs commands as real OS processes via os/exec, the production
+// counterpart to the command runner stubbed in tests.
 type execRunner struct{}
 
 var _ CommandRunner = execRunner{}

@@ -18,10 +18,9 @@ import (
 // are already rendered, so main exits non-zero without logging it as an app error.
 var errChecksFailed = errors.New("check(s) failed")
 
-// StatusFlags selects which checks a status run includes. There is one flag per
-// feature shown in the report, named after that feature, plus the --quality and
-// --security convenience umbrellas that flip on a whole family at once. Passing no
-// feature flag runs everything.
+// StatusFlags selects which checks a status run includes. There is one flag per feature shown
+// in the report, named after that feature, plus the --quality and --security convenience
+// umbrellas that flip on a whole family at once. Passing no feature flag runs everything.
 type StatusFlags struct {
 	VersionControl  bool `arg:"version-control" short:"vc" env:"CARE_STATUS_VERSION_CONTROL" default:"false" help:"Report git working-tree and upstream-sync state"`
 	Build           bool `arg:"build" short:"b" env:"CARE_STATUS_BUILD" default:"false" help:"Check that the module compiles"`
@@ -42,11 +41,11 @@ type StatusFlags struct {
 	Coverage bool `arg:"coverage" short:"c" env:"CARE_STATUS_COVERAGE" default:"false" help:"Collect coverage when running tests (implies --tests)"`
 	Race     bool `arg:"race" short:"ra" env:"CARE_STATUS_RACE" default:"false" help:"Run tests with -race"`
 	Fix      bool `arg:"fix" env:"CARE_STATUS_FIX" default:"false" help:"Apply auto-fixes before checking"`
-	// Amend is a fast, one-shot update for external live-tracking tooling to loop: a
-	// single call re-runs only the working-tree (version-control) state and amends it
-	// into the --output JSON file, re-grading from the preserved heavy-check results,
-	// then exits. With no file yet it falls through to a full run that seeds it. care
-	// never loops itself; the caller (a watcher/cron/dashboard) repeats the call.
+	// Amend is a fast, one-shot update for external live-tracking tooling to loop: a single
+	// call re-runs only the working-tree (version-control) state and amends it into the
+	// --output JSON file, re-grading from the preserved heavy-check results, then exits. With
+	// no file yet it falls through to a full run that seeds it. care never loops itself; the
+	// caller (a watcher/cron/dashboard) repeats the call.
 	Amend bool `arg:"amend" short:"a" env:"CARE_STATUS_AMEND" default:"false" help:"Amend the json report file with -vc information. Used with --json and --output."`
 }
 
@@ -55,32 +54,32 @@ type OutputFlags struct {
 	JSON          bool   `arg:"json" short:"j" env:"CARE_JSON" default:"false" help:"Output results as JSON"`
 	ExpandInstall bool   `arg:"expand-install" short:"ei" env:"CARE_EXPAND_INSTALL" default:"false" help:"Expand the per-tool install phase into its own section instead of folding it into the repo header"`
 	Output        string `arg:"output" short:"o" env:"CARE_OUTPUT" help:"Write the JSON report to a file instead of stdout."`
-	// Pretty renders the human report to stdout in addition to the --output JSON file,
-	// so a CI run shows the report in its log while still producing the machine
-	// artifact. Without --output it is a no-op (stdout already renders).
+	// Pretty renders the human report to stdout in addition to the --output JSON file, so a CI
+	// run shows the report in its log while still producing the machine artifact. Without
+	// --output it is a no-op (stdout already renders).
 	Pretty bool `arg:"pretty" short:"p" env:"CARE_PRETTY" default:"false" help:"With --output, also render the human report to stdout (e.g. for CI logs)"`
 }
 
-// StatusConfig is the full flag set for a status run: which checks to run, how to
-// render them, and the verbosity level.
+// StatusConfig is the full flag set for a status run: which checks to run, how to render
+// them, and the verbosity level.
 type StatusConfig struct {
 	StatusFlags
 	OutputFlags
 	cli.Verbosity
 }
 
-// StatusCommand runs the configured checks against the current repo and renders
-// their results.
+// StatusCommand runs the configured checks against the current repo and renders their
+// results.
 type StatusCommand struct {
 	cli.BaseCommand[StatusConfig]
 	eco    *care.Ecosystem
 	runner care.Runner
-	// module resolves the repo's module / project identity for the report header
-	// (golang: go.mod path, node: package.json name). nil when unknown; returns ""
-	// when it cannot be determined for a given dir.
+	// module resolves the repo's module / project identity for the report header (golang:
+	// go.mod path, node: package.json name). nil when unknown; returns "" when it cannot be
+	// determined for a given dir.
 	module func(dir string) string
-	// disabled reports whether a feature is turned off in config, so an operator can
-	// drop a check from the everything-on default without disabling its tool.
+	// disabled reports whether a feature is turned off in config, so an operator can drop a
+	// check from the everything-on default without disabling its tool.
 	disabled func(feature string) bool
 	// vc resolves the repo's version-control identity for the report header (branch,
 	// commit, commit count, sync state). nil when unavailable.
@@ -91,8 +90,8 @@ type StatusCommand struct {
 
 var _ cli.Command[StatusConfig] = (*StatusCommand)(nil)
 
-// NewStatusCommand wires the status command to its ecosystem, runner, and the
-// resolvers for module identity, disabled features, version control, and grading.
+// NewStatusCommand wires the status command to its ecosystem, runner, and the resolvers for
+// module identity, disabled features, version control, and grading.
 func NewStatusCommand(eco *care.Ecosystem, runner care.Runner, module func(dir string) string, disabled func(feature string) bool, vc func(dir string) *output.VCInfo, grading rating.Config) *StatusCommand {
 	return &StatusCommand{eco: eco, runner: runner, module: module, disabled: disabled, vc: vc, grading: grading}
 }
@@ -102,15 +101,15 @@ func (c *StatusCommand) Help() string {
 	return "Report status for the current repository."
 }
 
-// Run executes the selected checks against the cwd and either renders the report or
-// writes it to --output. A --amend against an existing --output file takes the fast
-// amend path instead. Returns errChecksFailed when any check in a full run fails.
+// Run executes the selected checks against the cwd and either renders the report or writes it
+// to --output. A --amend against an existing --output file takes the fast amend path instead.
+// Returns errChecksFailed when any check in a full run fails.
 func (c *StatusCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	in := c.Inputs.StatusFlags
 	out := c.Inputs.OutputFlags
 
-	// fast path: amend an existing report in place. a missing file falls through to a
-	// full run below, which seeds it.
+	// fast path: amend an existing report in place. a missing file falls through to a full
+	// run below, which seeds it.
 	if in.Amend && out.Output != "" && fileExists(out.Output) {
 		return c.amend(options.Cwd, out.Output)
 	}
@@ -128,8 +127,8 @@ func (c *StatusCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 		if err := output.WriteReportFile(out.Output, output.BuildReport(outputs, info, c.grading)); err != nil {
 			return fmt.Errorf("failed to write report to %q: %w", out.Output, err)
 		}
-		// --pretty additionally renders the human report to stdout so a CI run shows
-		// what happened while the JSON file feeds downstream tooling.
+		// --pretty additionally renders the human report to stdout so a CI run shows what
+		// happened while the JSON file feeds downstream tooling.
 		if c.Inputs.Pretty {
 			renderOptions := output.RenderOptions{Verbosity: c.Inputs.Level(), JSON: false, ExpandInstall: c.Inputs.ExpandInstall, Grading: c.grading}
 			if err := output.Render(outputs, info, renderOptions); err != nil {
@@ -148,11 +147,10 @@ func (c *StatusCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	return nil
 }
 
-// amend runs only the working-tree (version-control) state and merges it into the
-// existing report at path, re-grading from the merged check set, then returns. It is
-// the fast one-shot update external tooling loops for live tracking, so it never
-// returns errChecksFailed: it updates the file rather than gating on the (preserved)
-// heavy-check results.
+// amend runs only the working-tree (version-control) state and merges it into the existing
+// report at path, re-grading from the merged check set, then returns. It is the fast one-shot
+// update external tooling loops for live tracking, so it never returns errChecksFailed: it
+// updates the file rather than gating on the (preserved) heavy-check results.
 func (c *StatusCommand) amend(cwd, path string) error {
 	config := care.EcosystemConfig{VersionControl: true}
 	applyDisabled(&config, c.disabled)
@@ -170,8 +168,8 @@ func (c *StatusCommand) amend(cwd, path string) error {
 	return nil
 }
 
-// runInfo resolves the caller-side report header (created stamp, repo dir, module
-// identity, version-control state) for a run that started at start.
+// runInfo resolves the caller-side report header (created stamp, repo dir, module identity,
+// version-control state) for a run that started at start.
 func (c *StatusCommand) runInfo(cwd string, start time.Time) output.RunInfo {
 	info := output.RunInfo{Created: start.UTC(), Repo: cwd, DurationMs: time.Since(start).Milliseconds()}
 	if c.module != nil {
@@ -189,11 +187,10 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// mapEcosystemConfigs maps the status flags onto the EcosystemConfig and the per-run
-// RunOptions, defaulting to everything (with coverage) when no feature flag is set.
-// Each feature has its own flag; the --quality umbrella additionally turns on build,
-// lint, dependencies, runtime and docs, and --security turns on secrets and
-// vulnerabilities.
+// mapEcosystemConfigs maps the status flags onto the EcosystemConfig and the per-run RunOptions,
+// defaulting to everything (with coverage) when no feature flag is set. Each feature has its own
+// flag; the --quality umbrella additionally turns on build, lint, dependencies, runtime and docs,
+// and --security turns on secrets and vulnerabilities.
 func mapEcosystemConfigs(in StatusFlags) (care.EcosystemConfig, care.RunOptions) {
 	cfg := care.EcosystemConfig{
 		VersionControl:  in.VersionControl,

@@ -1,5 +1,5 @@
-// Command care reports repository health and scaffolds config files for the
-// current repo's ecosystem.
+// Command care reports repository health and scaffolds config files for the current repo's
+// ecosystem.
 package main
 
 import (
@@ -15,8 +15,8 @@ import (
 	"github.com/toaweme/care/eco/shared/sync"
 )
 
-// GetConfig drives the generic `care get` file sync. With no --from it falls
-// back to listing the scaffolding subcommands.
+// GetConfig drives the generic `care get` file sync. With no --from it falls back to
+// listing the scaffolding subcommands.
 type GetConfig struct {
 	From  string `arg:"from" short:"f" env:"CARE_GET_FROM" help:"Source to sync from: a local path, a bundled template name, a github/gist url, or the owner/repo/path shorthand"`
 	Out   string `arg:"out" short:"o" env:"CARE_GET_OUT" help:"Destination path to write, relative to cwd"`
@@ -24,9 +24,8 @@ type GetConfig struct {
 	Force bool   `arg:"force" env:"CARE_GET_FORCE" default:"false" help:"Overwrite an existing destination file"`
 }
 
-// GetCommand is the parent of the repo-scaffolding subcommands (lint, ...) and
-// the generic file-sync entry point. Run with --from it syncs one file; run bare
-// it lists its subcommands.
+// GetCommand is the parent of the repo-scaffolding subcommands (lint, ...) and the generic
+// file-sync entry point. Run with --from it syncs one file; run bare it lists its subcommands.
 type GetCommand struct {
 	cli.BaseCommand[GetConfig]
 	client http.Client

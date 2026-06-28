@@ -35,6 +35,6 @@ type Result struct {
 // source position when known.
 type Reason struct {
 	Minor int    // the go1.N this construct needs
-	Desc  string // human description
+	Desc  string // human-readable name of the construct
 	Pos   string // file:line:col, best effort (empty when unknown)
 }

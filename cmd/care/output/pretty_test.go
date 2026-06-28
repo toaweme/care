@@ -9,8 +9,8 @@ import (
 
 var ansiRE = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
-// capture runs fn with stdout redirected and returns what it printed, stripped
-// of ANSI styling so assertions read against the plain layout.
+// capture runs fn with stdout redirected and returns what it printed, stripped of ANSI
+// styling so assertions read against the plain layout.
 func capture(t *testing.T, fn func()) string {
 	t.Helper()
 	r, w, err := os.Pipe()
@@ -63,9 +63,9 @@ func Test_FlatBlock_Alignment(t *testing.T) {
 	}
 }
 
-// rows using the blank-first-cell convention (lint, per file) render grouped: the
-// shared key on its own line, its rows nested beneath, so a wide key column does
-// not push messages to a far-right gutter.
+// rows using the blank-first-cell convention (lint, per file) render grouped: the shared key
+// on its own line, its rows nested beneath, so a wide key column does not push messages to a
+// far-right gutter.
 func Test_FlatBlock_GroupsBlankFirstCell(t *testing.T) {
 	rows := [][]string{
 		{"a/very/long/path/file_one.go", "1:1", "missing comment"},
@@ -76,8 +76,8 @@ func Test_FlatBlock_GroupsBlankFirstCell(t *testing.T) {
 		NewPretty().ItemRows(rows)
 	})
 	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
-	// file1 + 2 members + file2 + 1 member = 5 lines (no header; that is the
-	// caller's summary line).
+	// file1 + 2 members + file2 + 1 member = 5 lines (no header; that is the caller's summary
+	// line).
 	if len(lines) != 5 {
 		t.Fatalf("expected 5 lines, got %d: %q", len(lines), got)
 	}
@@ -88,8 +88,8 @@ func Test_FlatBlock_GroupsBlankFirstCell(t *testing.T) {
 	if got := runeCol(lines[1], "1:1"); got != subRowIndent*2 {
 		t.Errorf("member column = %d, want %d (%q)", got, subRowIndent*2, lines[1])
 	}
-	// the wide path no longer dictates where messages start: the second file is a
-	// header, and its member's message sits at the same shallow member column.
+	// the wide path no longer dictates where messages start: the second file is a header, and
+	// its member's message sits at the same shallow member column.
 	if lines[3] != "  short.go" {
 		t.Errorf("second file header = %q, want %q", lines[3], "  short.go")
 	}
@@ -98,9 +98,8 @@ func Test_FlatBlock_GroupsBlankFirstCell(t *testing.T) {
 	}
 }
 
-// the final cell is never clipped: a long message is emitted in full so the
-// terminal can soft-wrap it, instead of being cut at a fixed column the user
-// cannot widen past by resizing.
+// the final cell is never clipped: a long message is emitted in full so the terminal can
+// soft-wrap it, instead of being cut at a fixed column the user cannot widen past by resizing.
 func Test_FlatBlock_NeverTruncatesLastCell(t *testing.T) {
 	summary := "Incorrect enforcement of email constraints in crypto/x509 long enough to overflow any sensible terminal width and then some more"
 	rows := [][]string{{"GO-2026-4599", "crypto/x509", "v1.26.0 -> v1.26.1", summary}}

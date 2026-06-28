@@ -60,8 +60,8 @@ func run(cwd string, args []string) error {
 	}
 	app := cli.NewApp(cli.Config{Name: "care", Version: version}, cli.GlobalFlags{Cwd: cwd})
 
-	// build the tools at the top (with any operator version pin), then inject them
-	// into the features that fill the ecosystem's feature slots.
+	// build the tools at the top (with any operator version pin), then inject them into the
+	// features that fill the ecosystem's feature slots.
 	golangci := gotools.NewGolangCiLint(cfg.ToolVersion("golangci-lint"))
 	betterleaks := sharedtools.NewBetterleaks(cfg.ToolVersion("betterleaks"))
 	govulncheck := gotools.NewGovulncheck(cfg.ToolVersion("govulncheck"))
@@ -105,17 +105,17 @@ func run(cwd string, args []string) error {
 	return nil
 }
 
-// resolveVC reads the repo's version-control identity for the report header. A
-// non-git dir (or a probe failure) yields an empty header rather than an error: the
-// report still renders, just without the VC line.
+// resolveVC reads the repo's version-control identity for the report header. A non-git dir
+// (or a probe failure) yields an empty header rather than an error: the report still renders,
+// just without the VC line.
 func resolveVC(dir string) *output.VCInfo {
 	info, err := git.NewRepository(dir).Info(context.Background())
 	if err != nil {
 		return nil
 	}
 	branch, tag := ciRef(info.Branch, info.Tag)
-	// a tagged CI build checks out a detached HEAD, so branch is empty; a tag (or a
-	// commit) is still enough identity to emit the header.
+	// a tagged CI build checks out a detached HEAD, so branch is empty; a tag (or a commit)
+	// is still enough identity to emit the header.
 	if branch == "" && tag == "" && info.Commit == "" {
 		return nil
 	}
@@ -143,12 +143,11 @@ func resolveVC(dir string) *output.VCInfo {
 	return vc
 }
 
-// ciRef fills branch and tag from the CI runner's environment when git cannot
-// supply them, which is the normal case for a tagged release: the runner checks out
-// a detached HEAD, so git reports no branch, but the env names the ref. GitHub
-// Actions sets GITHUB_REF_TYPE + GITHUB_REF_NAME; GitLab sets CI_COMMIT_TAG and
-// CI_COMMIT_REF_NAME. Git-derived values win when present, so local runs are
-// unaffected.
+// ciRef fills branch and tag from the CI runner's environment when git cannot supply them,
+// which is the normal case for a tagged release: the runner checks out a detached HEAD, so git
+// reports no branch, but the env names the ref. GitHub Actions sets GITHUB_REF_TYPE +
+// GITHUB_REF_NAME; GitLab sets CI_COMMIT_TAG and CI_COMMIT_REF_NAME. Git-derived values win
+// when present, so local runs are unaffected.
 func ciRef(branch, tag string) (string, string) {
 	if tag == "" {
 		if t := os.Getenv("CI_COMMIT_TAG"); t != "" {

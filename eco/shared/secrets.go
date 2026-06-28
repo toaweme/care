@@ -70,7 +70,7 @@ func (f *secrets) Run(ctx context.Context, dir string, _ care.RunOptions) care.O
 	return care.Fail(care.SecretReport{Findings: findings})
 }
 
-// dropIgnored removes findings whose file git ignores in dir.
+// dropIgnored removes findings whose file is ignored by git within dir.
 func dropIgnored(ctx context.Context, dir string, findings []care.SecretFinding) []care.SecretFinding {
 	files := make([]string, 0, len(findings))
 	for _, fnd := range findings {

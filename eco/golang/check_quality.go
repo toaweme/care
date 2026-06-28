@@ -21,14 +21,15 @@ type qualityCheck struct {
 
 var _ care.Quality = (*qualityCheck)(nil)
 
-// NewQuality is the single static-analysis feature for Go. When a .golangci.yml
-// governs the repo it runs golangci-lint (which already bundles govet and the
-// gofmt/goimports formatters); otherwise it falls back to the toolchain-native
-// `go vet` + `gofmt -l`, reported as the same QualityReport. This is one "lint"
-// feature rather than three overlapping ones - vet and format used to be separate
-// slots that simply self-skipped whenever golangci governed the repo (which, given
-// `care setup lint`, is every repo). In fix mode (QualityRunOptions.Fix) it formats
-// and applies golangci's auto-fixes, or `go fmt` as the fallback.
+// NewQuality is the single static-analysis feature for Go. When a .golangci.yml governs the
+// repo it runs golangci-lint (which already bundles govet and the gofmt/goimports
+// formatters); otherwise it falls back to the toolchain-native `go vet` + `gofmt -l`,
+// reported as the same QualityReport.
+//
+// This is one "lint" feature rather than three overlapping ones: vet and format used to be
+// separate slots that simply self-skipped whenever golangci governed the repo (which, given
+// `care setup lint`, is every repo). In fix mode (QualityRunOptions.Fix) it formats and
+// applies golangci's auto-fixes, or `go fmt` as the fallback.
 func NewQuality(golangci, gotool, gofmt care.Tool) care.Quality {
 	return &qualityCheck{
 		BaseCheck: care.NewBaseCheck("golangci-lint", golangci, gotool, gofmt),
