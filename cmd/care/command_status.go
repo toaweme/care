@@ -54,10 +54,10 @@ type OutputFlags struct {
 	JSON          bool   `arg:"json" short:"j" env:"CARE_JSON" default:"false" help:"Output results as JSON"`
 	ExpandInstall bool   `arg:"expand-install" short:"ei" env:"CARE_EXPAND_INSTALL" default:"false" help:"Expand the per-tool install phase into its own section instead of folding it into the repo header"`
 	Output        string `arg:"output" short:"o" env:"CARE_OUTPUT" help:"Write the JSON report to a file instead of stdout."`
-	// Pretty renders the human report to stdout in addition to the --output JSON file, so a CI
+	// Stdout renders the human report to stdout in addition to the --output JSON file, so a CI
 	// run shows the report in its log while still producing the machine artifact. Without
 	// --output it is a no-op (stdout already renders).
-	Pretty bool `arg:"pretty" short:"p" env:"CARE_PRETTY" default:"false" help:"With --output, also render the human report to stdout (e.g. for CI logs)"`
+	Stdout bool `arg:"stdout" short:"s" env:"CARE_STDOUT" default:"false" help:"With --output, also render the human report to stdout (e.g. for CI logs)"`
 }
 
 // StatusConfig is the full flag set for a status run: which checks to run, how to render
@@ -127,9 +127,9 @@ func (c *StatusCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 		if err := output.WriteReportFile(out.Output, output.BuildReport(outputs, info, c.grading)); err != nil {
 			return fmt.Errorf("failed to write report to %q: %w", out.Output, err)
 		}
-		// --pretty additionally renders the human report to stdout so a CI run shows what
+		// --stdout additionally renders the human report to stdout so a CI run shows what
 		// happened while the JSON file feeds downstream tooling.
-		if c.Inputs.Pretty {
+		if c.Inputs.Stdout {
 			renderOptions := output.RenderOptions{Verbosity: c.Inputs.Level(), JSON: false, ExpandInstall: c.Inputs.ExpandInstall, Grading: c.grading}
 			if err := output.Render(outputs, info, renderOptions); err != nil {
 				return err

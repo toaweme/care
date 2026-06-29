@@ -65,7 +65,7 @@ toolchain). With `auto_install: true` (the default) it provisions any missing bi
 
 ## Commands
 
-A command is a verb; modes are flags (no flag-per-capability). Bare `care` is `care status` with everything on.
+Bare `care` is `care status` with everything on.
 
 ### `care status` or just `care`
 
@@ -73,7 +73,7 @@ Run the selected checks against the current repo and render the result.
 
 - `--json`/`-j` emits the report as JSON to stdout
 - `--output`/`-o <file>` writes the JSON report to a file instead.
-- `--pretty`/`-p` outputs to stdout. Useful in CI where we need both JSON file and the logs.
+- `--stdout`/`-s` outputs to stdout. Useful in CI where we need both JSON file and the logs.
 - `--amend`/`-a` is a fast one-shot refresh of just the working-tree state, merged into the `--output` file
   (~36x faster than a full `care status` run) for an external watcher, cron, or dashboard to poll. 
 

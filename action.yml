@@ -171,7 +171,7 @@ runs:
         report=""; report_flags=""
         if [ -n "$CARE_OUTPUT" ] || [ -n "$CARE_PUBLISH_URL" ]; then
           report="${CARE_OUTPUT:-report.care.json}"
-          report_flags="--json --pretty --output ${GITHUB_WORKSPACE}/${report}"
+          report_flags="--json --stdout --output ${GITHUB_WORKSPACE}/${report}"
         fi
         echo "report-path=$report" >> "$GITHUB_OUTPUT"
         # capture care's exit code rather than failing now, so a failing report still

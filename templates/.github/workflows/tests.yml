@@ -36,7 +36,7 @@ jobs:
         run: go install github.com/toaweme/care/cmd/care@latest
 
       - name: Generate care report
-        run: care status --json --pretty --output report.care.json || true
+        run: care status --json --stdout --output report.care.json || true
 
       - name: Publish report
         run: |
