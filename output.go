@@ -23,6 +23,14 @@ type Output[T Report] struct {
 	profile    string
 	dir        string
 	durationMs int64
+
+	// weight and cap are the grading policy stamped from the check's WithRating
+	// registration: weight is the feature's importance in the score, capScore the
+	// ceiling it imposes on a failure (active only when hasCap). They ride on the
+	// result so the rating engine grades from per-check policy.
+	weight   int
+	capScore int
+	hasCap   bool
 }
 
 // Pass is an OK outcome carrying its typed payload.
@@ -73,6 +81,23 @@ func (o Output[T]) Err() error { return o.err }
 
 // DurationMs returns how long the check took, in milliseconds.
 func (o Output[T]) DurationMs() int64 { return o.durationMs }
+
+// Weight returns the feature's grading weight, stamped from its WithRating
+// registration (0 for an unweighted, informational feature).
+func (o Output[T]) Weight() int { return o.weight }
+
+// Cap returns the score ceiling this check imposes on a failure; ok is false when the
+// check imposes no cap.
+func (o Output[T]) Cap() (int, bool) { return o.capScore, o.hasCap }
+
+// WithWeight returns a copy carrying the grading weight, so a caller (or a test)
+// synthesizing a result stream outside the runner can stamp the policy WithRating
+// would have attached.
+func (o Output[T]) WithWeight(weight int) Output[T] { o.weight = weight; return o }
+
+// WithCap returns a copy carrying the failure score cap, the companion to WithWeight
+// for the critical features (secrets, vulnerabilities) that impose a ceiling.
+func (o Output[T]) WithCap(score int) Output[T] { o.capScore, o.hasCap = score, true; return o }
 
 // Version returns the tool version for this result (empty for typed outputs).
 func (o Output[T]) Version() string { return "" }
@@ -149,6 +174,11 @@ type Rendered interface {
 	Data() any
 	Err() error
 	DurationMs() int64
+	// Weight is the feature's grading weight (0 for an unweighted feature); Cap is the
+	// score ceiling it imposes on a failure, ok false when it imposes none. Both are
+	// stamped from the check's WithRating registration so the grade reads per-check.
+	Weight() int
+	Cap() (score int, ok bool)
 	// Version is the resolved tool version captured at install (install outputs
 	// only); "" for run-phase checks, which reference their tool by bare name.
 	Version() string
@@ -190,6 +220,8 @@ func (s simpleOutput) Rows(int) [][]string { return nil }
 func (s simpleOutput) Data() any           { return nil }
 func (s simpleOutput) Err() error          { return s.err }
 func (s simpleOutput) DurationMs() int64   { return s.durationMs }
+func (s simpleOutput) Weight() int         { return 0 }
+func (s simpleOutput) Cap() (int, bool)    { return 0, false }
 
 // Task is a selected feature erased for the runner: enough to install its tools and
 // run it, with its feature identity attached. It can only be built inside this
@@ -240,6 +272,12 @@ func (t task[T]) run(ctx context.Context, dir string, opts RunOptions) Rendered 
 	o.check = t.check.Name()
 	o.profile = t.profile.Name
 	o.dir = dir
+	// stamp the grading policy registered with WithRating, so the result carries its
+	// own weight and cap into the rating engine. An unwrapped check grades at weight 0.
+	if r, ok := t.check.(Rated); ok {
+		o.weight = r.Weight()
+		o.capScore, o.hasCap = r.Cap()
+	}
 	if o.tool == "" {
 		if tools := t.check.Tools(); len(tools) > 0 && tools[0].Name() != "" {
 			o.tool = tools[0].Name()

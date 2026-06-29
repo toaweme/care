@@ -23,6 +23,11 @@ type Health struct {
 	Slowest    *Slowest `json:"slowest,omitempty"`
 
 	Metrics Metrics `json:"metrics"`
+
+	// Breakdown explains the score check by check: each weighted feature, the points it
+	// cost the grade, and any cap that lowered it. It is what a dashboard reads to show
+	// "what bumped the score down" without re-deriving the weighting itself.
+	Breakdown []rating.Contribution `json:"breakdown,omitempty"`
 }
 
 // Slowest is the single longest-running check, the run's bottleneck. Checks run in parallel,
@@ -52,7 +57,7 @@ type TestMetric struct {
 // buildHealth rolls the run-phase outputs into the health headline: the status tally, the
 // rating-engine grade, the slowest check, and the promoted metrics. durationMs is the run's
 // wall-clock, measured by the caller around the runner.
-func buildHealth(runs []care.Rendered, durationMs int64, grading rating.Config) Health {
+func buildHealth(runs []care.Rendered, durationMs int64) Health {
 	h := Health{DurationMs: durationMs}
 
 	checks := make([]rating.Check, 0, len(runs))
@@ -67,15 +72,16 @@ func buildHealth(runs []care.Rendered, durationMs int64, grading rating.Config) 
 		case care.StatusSkip:
 			h.Skip++
 		}
-		checks = append(checks, rating.Check{Feature: o.Feature(), Outcome: outcome(o.Status())})
+		capScore, hasCap := o.Cap()
+		checks = append(checks, rating.Check{Feature: o.Feature(), Outcome: outcome(o.Status()), Weight: o.Weight(), Cap: capScore, HasCap: hasCap})
 		if h.Slowest == nil || o.DurationMs() > h.Slowest.DurationMs {
 			h.Slowest = &Slowest{Feature: o.Feature(), DurationMs: o.DurationMs()}
 		}
 		h.accrueMetrics(o)
 	}
 
-	grade := rating.Evaluate(checks, grading)
-	h.Score, h.Rating, h.Verdict = grade.Score, grade.Rating, grade.Verdict
+	grade := rating.Evaluate(checks)
+	h.Score, h.Rating, h.Verdict, h.Breakdown = grade.Score, grade.Rating, grade.Verdict, grade.Breakdown
 	return h
 }
 

@@ -22,9 +22,9 @@ type RenderOptions struct {
 	// ExpandInstall prints the per-tool install phase as its own section. Off by default: the
 	// tool count is folded into the repo header instead.
 	ExpandInstall bool
-	// Grading is the health policy (weights + caps) the score is computed against.
-	// The zero value grades with the built-in defaults.
-	Grading rating.Config
+	// Explain prints the per-check grading breakdown beneath the report (what each
+	// weighted feature cost the score, and any cap that lowered it). Off by default.
+	Explain bool
 }
 
 // Render writes a run's outputs as JSON or a structured text report. It consumes the
@@ -34,7 +34,7 @@ func Render(outputs []care.Rendered, info RunInfo, opts RenderOptions) error {
 	if opts.JSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(buildJSON(outputs, info, opts.Grading)); err != nil {
+		if err := enc.Encode(buildJSON(outputs, info)); err != nil {
 			return fmt.Errorf("failed to encode JSON output: %w", err)
 		}
 		return nil
@@ -69,13 +69,64 @@ func renderPretty(outputs []care.Rendered, info RunInfo, opts RenderOptions) {
 	if len(runs) == 0 {
 		return
 	}
-	health := buildHealth(runs, info.DurationMs, opts.Grading)
+	health := buildHealth(runs, info.DurationMs)
 	p.Section(shortenRepo(runs[0].Dir()), repoMeta(health, headerTools)...)
 	if vc := vcMeta(info.VC); vc != "" {
 		p.SubHeader(vc)
 	}
 	renderChecks(p, runs, opts)
+	if opts.Explain {
+		renderBreakdown(p, health)
+	}
 	p.Newline()
+}
+
+// renderBreakdown prints the per-check grading explanation beneath the report: each
+// weighted feature, the points it cost the score, and any cap that actually lowered
+// the grade. It reads the breakdown the rating engine already computed, so it shows
+// exactly what moved the headline number. Passing checks (zero deduction) are dropped
+// so only what bumped the score down is listed.
+func renderBreakdown(p *Pretty, h Health) {
+	var dents []rating.Contribution
+	for _, c := range h.Breakdown {
+		if c.Deduction > 0 || c.Cap != nil {
+			dents = append(dents, c)
+		}
+	}
+	if len(dents) == 0 {
+		return
+	}
+	p.Newline()
+	p.Section("grading", DimStyle.Render(fmt.Sprintf("%d/100", h.Score)))
+	width := 0
+	for _, c := range dents {
+		if n := len(featureLabel(c.Feature)); n > width {
+			width = n
+		}
+	}
+	for _, c := range dents {
+		detail := WarnStyle.Render(fmt.Sprintf("-%.1f", c.Deduction)) + DimStyle.Render(fmt.Sprintf(" · weight %d · %s", c.Weight, c.Outcome))
+		if c.Cap != nil {
+			ceiling := fmt.Sprintf(" · caps at %d", *c.Cap)
+			if c.Binding {
+				ceiling += " (binding)"
+			}
+			detail += ErrorStyle.Render(ceiling)
+		}
+		p.CheckRow(outcomeIcon(c.Outcome), featureLabel(c.Feature), width, detail)
+	}
+}
+
+// outcomeIcon returns the styled status glyph for a grading outcome label.
+func outcomeIcon(outcome string) string {
+	switch outcome {
+	case "fail":
+		return ErrorStyle.Render("✗")
+	case "warn":
+		return WarnStyle.Render("!")
+	default:
+		return OKStyle.Render("✓")
+	}
 }
 
 // repoMeta builds a repo header's meta segments: the graded score + rating, the colored

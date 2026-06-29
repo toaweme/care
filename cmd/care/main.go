@@ -21,7 +21,6 @@ import (
 	"github.com/toaweme/care/eco/shared"
 	sharedtools "github.com/toaweme/care/eco/shared/tools"
 	"github.com/toaweme/care/internal/devops/git"
-	"github.com/toaweme/care/internal/rating"
 	"github.com/toaweme/care/templates"
 )
 
@@ -54,6 +53,10 @@ func run(cwd string, args []string) error {
 		config.NewFileStore(cwd, "care", true, yml),
 	}
 	cfg := care.Defaults()
+	// seed the grading policy with the Go ecosystem's defaults before reading config, so a
+	// care.yml health block overlays only the keys the operator sets (the yaml decode merges
+	// into the seeded struct) and the rest keep care's published Go weights and caps.
+	cfg.Health = golang.DefaultRating()
 	for _, store := range stores {
 		// optional: a missing config store layers nothing and is not an error.
 		_ = store.Read(&cfg)
@@ -68,23 +71,27 @@ func run(cwd string, args []string) error {
 	gotool := gotools.Go()
 	gofmt := gotools.Gofmt()
 
+	// WithRating binds each feature's weight (and the critical features' caps) to its
+	// check here at the assembly site, so the grading policy reads as one table and the
+	// rating engine grades from per-check policy rather than a central feature map. The
+	// values come from cfg.Health: the Go defaults, overlaid with any care.yml overrides.
+	grade := cfg.Health
 	eco := &care.Ecosystem{
-		VersionControl:  shared.NewVersionControl(),
-		Build:           golang.NewBuild(gotool),
-		Quality:         golang.NewQuality(golangci, gotool, gofmt),
-		Dependencies:    golang.NewGoMod(gotool),
+		VersionControl:  care.WithRating(shared.NewVersionControl(), grade.Weights.VersionControl),
+		Build:           care.WithRating(golang.NewBuild(gotool), grade.Weights.Build),
+		Quality:         care.WithRating(golang.NewQuality(golangci, gotool, gofmt), grade.Weights.Lint),
+		Dependencies:    care.WithRating(golang.NewGoMod(gotool), grade.Weights.Dependencies),
 		Runtime:         golang.NewRuntime(gotool),
-		Docs:            golang.NewDocs(floatOption(cfg, "docs", "min")),
-		Tests:           golang.NewTests(gotool, cfg.Profiles.Tests),
-		Benchmark:       golang.NewBenchmark(gotool, cfg.Profiles.Bench),
-		Secrets:         shared.NewBetterleaks(betterleaks, boolOption(cfg, "sec.secrets", "history")),
-		Vulnerabilities: golang.NewGovulncheck(govulncheck, cfg.CheckOption("sec.vuln", "db")),
+		Docs:            care.WithRating(golang.NewDocs(floatOption(cfg, "docs", "min")), grade.Weights.Docs),
+		Tests:           care.WithRating(golang.NewTests(gotool, cfg.Profiles.Tests), grade.Weights.Tests),
+		Benchmark:       care.WithRating(golang.NewBenchmark(gotool, cfg.Profiles.Bench), grade.Weights.Benchmarks),
+		Secrets:         care.WithRating(shared.NewBetterleaks(betterleaks, boolOption(cfg, "sec.secrets", "history")), grade.Weights.Secrets, care.CapAt(grade.Caps.Secrets)),
+		Vulnerabilities: care.WithRating(golang.NewGovulncheck(govulncheck, cfg.CheckOption("sec.vuln", "db")), grade.Weights.Vulnerabilities, care.CapAt(grade.Caps.Vulnerabilities)),
 		Fixer:           golang.NewFixer(golangci, gotool),
 	}
 
 	runner := care.NewRunner(cfg.AutoInstall, cfg.Tools)
-	grading := rating.FromConfig(cfg.Health.Weights, cfg.Health.Caps)
-	statusCommand := NewStatusCommand(eco, runner, golang.ModulePath, cfg.CheckDisabled, resolveVC, grading)
+	statusCommand := NewStatusCommand(eco, runner, golang.ModulePath, cfg.CheckDisabled, resolveVC)
 	helpCommand := builtinCommands.NewHelpCommand(app.Config, app.Commands, app.OutputFormats, app.DefaultCommand)
 	app.Help(helpCommand)
 	app.Default(statusCommand)

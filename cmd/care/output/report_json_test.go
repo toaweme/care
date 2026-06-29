@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/toaweme/care"
-	"github.com/toaweme/care/internal/rating"
 )
 
 // Test_BuildJSON_SingleRepo checks the single-repo wire shape: a flat check list under one
@@ -17,12 +16,12 @@ func Test_BuildJSON_SingleRepo(t *testing.T) {
 	outputs := []care.Rendered{
 		care.InstallResult("golangci-lint", care.StatusOK, "present"),
 		care.Result(care.FeatureLint, "golangci-lint", "/src/repoA", care.StatusFail,
-			care.QualityReport{Issues: []care.QualityIssue{{File: "main.go", Line: 3, Col: 1, Message: "ineffassign", Linter: "ineffassign"}}}),
-		care.Result(care.FeatureDependencies, "go-mod", "/src/repoA", care.StatusOK, care.DepsReport{}),
+			care.QualityReport{Issues: []care.QualityIssue{{File: "main.go", Line: 3, Col: 1, Message: "ineffassign", Linter: "ineffassign"}}}).WithWeight(20),
+		care.Result(care.FeatureDependencies, "go-mod", "/src/repoA", care.StatusOK, care.DepsReport{}).WithWeight(8),
 	}
 
 	created := time.Date(2026, 6, 9, 14, 23, 1, 0, time.UTC)
-	rep := buildJSON(outputs, RunInfo{Created: created, Repo: "/src/repoA"}, rating.Default())
+	rep := buildJSON(outputs, RunInfo{Created: created, Repo: "/src/repoA"})
 	if rep.Author != "care" || rep.Created != "2026-06-09T14:23:01Z" {
 		t.Fatalf("header = author %q created %q, want care / RFC3339", rep.Author, rep.Created)
 	}
@@ -58,7 +57,7 @@ func Test_BuildJSON_ErroredCheck(t *testing.T) {
 		care.ErroredResult[care.VulnReport](care.FeatureVulnerabilities, "govulncheck", "/src/repoA",
 			"tool failed", errors.New("failed to run govulncheck: exit status 1\ngovulncheck: no required module provides package")),
 	}
-	rep := buildJSON(outputs, RunInfo{Repo: "/src/repoA"}, rating.Default())
+	rep := buildJSON(outputs, RunInfo{Repo: "/src/repoA"})
 	if len(rep.Checks) != 1 {
 		t.Fatalf("got %d checks, want 1", len(rep.Checks))
 	}
@@ -121,7 +120,7 @@ func Test_BuildJSON_Module(t *testing.T) {
 				Suites: []care.TestSuite{{Name: "example.com/a", Passed: true, Coverage: 87.5}}}),
 	}
 
-	rep := buildJSON(outputs, RunInfo{Repo: "/src/repoA", Module: "example.com/a"}, rating.Default())
+	rep := buildJSON(outputs, RunInfo{Repo: "/src/repoA", Module: "example.com/a"})
 	if rep.Dir != "/src/repoA" || rep.Module != "example.com/a" || len(rep.Checks) != 1 {
 		t.Fatalf("report = %+v, want repoA module example.com/a with 1 check", rep)
 	}

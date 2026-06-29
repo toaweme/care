@@ -69,7 +69,13 @@ type Check struct {
 	Tool       string `json:"tool,omitempty"`
 	Status     string `json:"status"`
 	DurationMs int64  `json:"duration_ms"`
-	Data       any    `json:"data,omitempty"`
+	// Weight is the feature's grading weight, and Cap the score ceiling it imposes on a
+	// failure (absent when none). They are carried on the wire so a re-grade from the
+	// report (the amend path) and any dashboard see exactly how each check moved the
+	// score, without re-deriving the policy.
+	Weight int  `json:"weight"`
+	Cap    *int `json:"cap,omitempty"`
+	Data   any  `json:"data,omitempty"`
 	// Error is the underlying failure detail for an errored check (a tool that
 	// failed to run, with no payload). Absent for normal pass/fail outcomes, whose
 	// detail lives in Data.
@@ -93,7 +99,7 @@ type Report struct {
 // buildJSON shapes the phase-tagged output stream into the wire format: install outputs become
 // Tools, run outputs become Checks and feed the graded Health headline, and the repo header
 // comes from the caller-resolved RunInfo.
-func buildJSON(outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
+func buildJSON(outputs []care.Rendered, info RunInfo) Report {
 	rep := Report{Author: "care", Dir: info.Repo, Module: info.Module, VersionControl: info.VC, Checks: []Check{}}
 	if !info.Created.IsZero() {
 		rep.Created = info.Created.Format(time.RFC3339)
@@ -113,15 +119,15 @@ func buildJSON(outputs []care.Rendered, info RunInfo, grading rating.Config) Rep
 		rep.Checks = append(rep.Checks, checkOf(o))
 		runs = append(runs, o)
 	}
-	rep.Health = buildHealth(runs, info.DurationMs, grading)
+	rep.Health = buildHealth(runs, info.DurationMs)
 	return rep
 }
 
 // BuildReport shapes a run's outputs into the public JSON report. It is the exported entry
 // point for callers that write the report themselves (e.g. to a file) rather than through
 // Render.
-func BuildReport(outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
-	return buildJSON(outputs, info, grading)
+func BuildReport(outputs []care.Rendered, info RunInfo) Report {
+	return buildJSON(outputs, info)
 }
 
 // ReadReport reads and decodes a previously written JSON report from path.
@@ -155,7 +161,7 @@ func WriteReportFile(path string, rep Report) error {
 // set. The promoted metrics, run duration and slowest check from the last full run are
 // preserved, since a fast pass does not recompute them. The install-phase tools are left
 // untouched.
-func AmendReport(existing Report, outputs []care.Rendered, info RunInfo, grading rating.Config) Report {
+func AmendReport(existing Report, outputs []care.Rendered, info RunInfo) Report {
 	rep := existing
 	if !info.Created.IsZero() {
 		rep.Created = info.Created.Format(time.RFC3339)
@@ -180,7 +186,7 @@ func AmendReport(existing Report, outputs []care.Rendered, info RunInfo, grading
 		}
 	}
 
-	rep.Health = regrade(rep.Health, rep.Checks, grading)
+	rep.Health = regrade(rep.Health, rep.Checks)
 	return rep
 }
 
@@ -198,7 +204,7 @@ func indexOfCheck(checks []Check, feature, profile string) int {
 // checks, preserving the metrics/duration/slowest carried on prev (a fast pass does not
 // recompute those). Each check's outcome is re-derived from its status string, the inverse of
 // Status.String().
-func regrade(prev Health, checks []Check, grading rating.Config) Health {
+func regrade(prev Health, checks []Check) Health {
 	h := prev
 	h.OK, h.Warn, h.Fail, h.Skip = 0, 0, 0, 0
 	rc := make([]rating.Check, 0, len(checks))
@@ -214,10 +220,14 @@ func regrade(prev Health, checks []Check, grading rating.Config) Health {
 		case rating.Skip:
 			h.Skip++
 		}
-		rc = append(rc, rating.Check{Feature: c.Feature, Outcome: o})
+		check := rating.Check{Feature: c.Feature, Outcome: o, Weight: c.Weight}
+		if c.Cap != nil {
+			check.Cap, check.HasCap = *c.Cap, true
+		}
+		rc = append(rc, check)
 	}
-	grade := rating.Evaluate(rc, grading)
-	h.Score, h.Rating, h.Verdict = grade.Score, grade.Rating, grade.Verdict
+	grade := rating.Evaluate(rc)
+	h.Score, h.Rating, h.Verdict, h.Breakdown = grade.Score, grade.Rating, grade.Verdict, grade.Breakdown
 	return h
 }
 
@@ -244,7 +254,11 @@ func checkOf(o care.Rendered) Check {
 		Tool:       o.Tool(),
 		Status:     o.Status().String(),
 		DurationMs: o.DurationMs(),
+		Weight:     o.Weight(),
 		Data:       o.Data(),
+	}
+	if capScore, ok := o.Cap(); ok {
+		c.Cap = &capScore
 	}
 	if err := o.Err(); err != nil {
 		c.Error = err.Error()

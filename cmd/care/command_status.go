@@ -11,7 +11,6 @@ import (
 
 	"github.com/toaweme/care"
 	"github.com/toaweme/care/cmd/care/output"
-	"github.com/toaweme/care/internal/rating"
 )
 
 // errChecksFailed marks a run that completed but had failing checks. The failures
@@ -58,6 +57,10 @@ type OutputFlags struct {
 	// run shows the report in its log while still producing the machine artifact. Without
 	// --output it is a no-op (stdout already renders).
 	Stdout bool `arg:"stdout" short:"s" env:"CARE_STDOUT" default:"false" help:"With --output, also render the human report to stdout (e.g. for CI logs)"`
+	// Explain prints the per-check grading breakdown beneath the report: each weighted
+	// feature, the points it cost the score, and any cap that lowered the grade. Off by
+	// default to keep the headline clean; the breakdown is always present in --json.
+	Explain bool `arg:"explain" short:"x" env:"CARE_EXPLAIN" default:"false" help:"Show the per-check score breakdown (what lowered the grade)"`
 }
 
 // StatusConfig is the full flag set for a status run: which checks to run, how to render
@@ -84,16 +87,15 @@ type StatusCommand struct {
 	// vc resolves the repo's version-control identity for the report header (branch,
 	// commit, commit count, sync state). nil when unavailable.
 	vc func(dir string) *output.VCInfo
-	// grading is the health policy (weights + caps) the score is computed against.
-	grading rating.Config
 }
 
 var _ cli.Command[StatusConfig] = (*StatusCommand)(nil)
 
 // NewStatusCommand wires the status command to its ecosystem, runner, and the resolvers for
-// module identity, disabled features, version control, and grading.
-func NewStatusCommand(eco *care.Ecosystem, runner care.Runner, module func(dir string) string, disabled func(feature string) bool, vc func(dir string) *output.VCInfo, grading rating.Config) *StatusCommand {
-	return &StatusCommand{eco: eco, runner: runner, module: module, disabled: disabled, vc: vc, grading: grading}
+// module identity, disabled features, and version control. The grading policy rides on the
+// ecosystem's checks (WithRating), so the score is computed from per-check weights and caps.
+func NewStatusCommand(eco *care.Ecosystem, runner care.Runner, module func(dir string) string, disabled func(feature string) bool, vc func(dir string) *output.VCInfo) *StatusCommand {
+	return &StatusCommand{eco: eco, runner: runner, module: module, disabled: disabled, vc: vc}
 }
 
 // Help returns the status command's usage text.
@@ -124,19 +126,19 @@ func (c *StatusCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	// --output writes the JSON report to a file (and seeds the --amend target);
 	// otherwise render to stdout in the selected format.
 	if out.Output != "" {
-		if err := output.WriteReportFile(out.Output, output.BuildReport(outputs, info, c.grading)); err != nil {
+		if err := output.WriteReportFile(out.Output, output.BuildReport(outputs, info)); err != nil {
 			return fmt.Errorf("failed to write report to %q: %w", out.Output, err)
 		}
 		// --stdout additionally renders the human report to stdout so a CI run shows what
 		// happened while the JSON file feeds downstream tooling.
 		if c.Inputs.Stdout {
-			renderOptions := output.RenderOptions{Verbosity: c.Inputs.Level(), JSON: false, ExpandInstall: c.Inputs.ExpandInstall, Grading: c.grading}
+			renderOptions := output.RenderOptions{Verbosity: c.Inputs.Level(), JSON: false, ExpandInstall: c.Inputs.ExpandInstall, Explain: c.Inputs.Explain}
 			if err := output.Render(outputs, info, renderOptions); err != nil {
 				return err
 			}
 		}
 	} else {
-		renderOptions := output.RenderOptions{Verbosity: c.Inputs.Level(), JSON: c.Inputs.JSON, ExpandInstall: c.Inputs.ExpandInstall, Grading: c.grading}
+		renderOptions := output.RenderOptions{Verbosity: c.Inputs.Level(), JSON: c.Inputs.JSON, ExpandInstall: c.Inputs.ExpandInstall, Explain: c.Inputs.Explain}
 		if err := output.Render(outputs, info, renderOptions); err != nil {
 			return err
 		}
@@ -162,7 +164,7 @@ func (c *StatusCommand) amend(cwd, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read report %q: %w", path, err)
 	}
-	if err := output.WriteReportFile(path, output.AmendReport(existing, outputs, info, c.grading)); err != nil {
+	if err := output.WriteReportFile(path, output.AmendReport(existing, outputs, info)); err != nil {
 		return fmt.Errorf("failed to write report to %q: %w", path, err)
 	}
 	return nil

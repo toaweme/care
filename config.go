@@ -25,21 +25,11 @@ type Config struct {
 	// with N profiles runs N times (e.g. tests plain + -race + a build-tag variant),
 	// each producing its own result row. An empty list keeps the synthesized default.
 	Profiles ProfilesConfig `yaml:"profiles,omitempty"`
-	// Health tunes the repo health grade (score + rating). Empty maps keep the
-	// built-in weights and caps.
-	Health HealthConfig `yaml:"health,omitempty"`
-}
-
-// HealthConfig tunes how the run's check outcomes roll up into a health grade. Both
-// maps overlay the built-in defaults key-by-key, so setting one weight keeps the
-// rest. The keys are feature names (e.g. "build", "secrets").
-type HealthConfig struct {
-	// Weights is the relative importance of each feature; 0 makes a feature
-	// informational (excluded from the score).
-	Weights map[string]int `yaml:"weights,omitempty"`
-	// Caps is the worst-case score a failing feature is allowed to leave standing
-	// (e.g. a committed secret caps the whole grade).
-	Caps map[string]int `yaml:"caps,omitempty"`
+	// Health tunes the repo health grade: the per-feature score weights and the failing-
+	// feature caps. The composition root seeds it with the active ecosystem's defaults
+	// (e.g. golang.DefaultRating) before reading config, so a care.yml health block
+	// overlays only the keys the operator sets and the rest keep the ecosystem defaults.
+	Health Rating `yaml:"health,omitempty"`
 }
 
 // ProfilesConfig holds the per-feature run-profiles. Only the profiled features

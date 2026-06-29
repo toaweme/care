@@ -1,10 +1,15 @@
 // Package rating turns a run's per-check outcomes into a single repo health grade:
-// a 0-100 score, a letter rating, and a coarse verdict. It is deliberately
-// decoupled from the rest of care (it knows nothing of Output/Report types), so any
-// ecosystem can grade the same way by handing it a flat list of Checks.
+// a 0-100 score, a letter rating, a coarse verdict, and a per-check breakdown of
+// what moved the score. It is deliberately decoupled from the rest of care (it knows
+// nothing of Output/Report types) and from any feature catalog: each Check carries
+// its own weight and cap, so the grading policy lives at the ecosystem where the
+// checks are registered, not in a central feature->weight map here.
 package rating
 
-import "math"
+import (
+	"math"
+	"sort"
+)
 
 // Outcome is one check's result, mirrored here so the rating engine carries no
 // dependency on the core care types.
@@ -18,107 +23,96 @@ const (
 	Skip
 )
 
-// Check is one weighted input to the score: the feature that ran and how it fared.
-// The feature string keys both its weight and any score cap.
+// String returns the lowercase wire label for an outcome.
+func (o Outcome) String() string {
+	switch o {
+	case Pass:
+		return "pass"
+	case Warn:
+		return "warn"
+	case Fail:
+		return "fail"
+	default:
+		return "skip"
+	}
+}
+
+// Check is one weighted input to the score: the feature that ran, how it fared, its
+// weight in the average, and any score ceiling it imposes when it fails. Weight and
+// Cap travel on the check itself (stamped from its ecosystem registration), so the
+// engine grades without consulting an external policy map.
 type Check struct {
 	Feature string
 	Outcome Outcome
+	// Weight is the feature's relative importance; 0 (or negative) makes it
+	// informational and excludes it from the score.
+	Weight int
+	// Cap is the worst score this check is allowed to leave standing when it fails,
+	// active only when HasCap is set, so a genuine emergency (a committed secret)
+	// cannot hide behind a good average.
+	Cap    int
+	HasCap bool
 }
 
-// Config is the operator-tunable grading policy: how much each feature counts and
-// the worst-case score a failing feature is allowed to leave standing.
-type Config struct {
-	// Weights is the relative importance of each feature (a feature absent or set to
-	// 0 is informational and excluded from the score, e.g. benchmarks).
-	Weights map[string]int
-	// Caps maps a feature to the maximum score allowed when that feature fails, so a
-	// genuine emergency (a committed secret) cannot hide behind a good average. A
-	// feature with no cap relies on its weight alone.
-	Caps map[string]int
-}
-
-// Result is the computed grade: the numeric score, its letter rating, and the
-// coarse verdict tier the letter falls into.
+// Result is the computed grade: the numeric score, its letter rating, the coarse
+// verdict tier, and the per-check breakdown explaining how the score was reached.
 type Result struct {
-	Score   int    `json:"score"`
-	Rating  string `json:"rating"`
-	Verdict string `json:"verdict"`
+	Score     int            `json:"score"`
+	Rating    string         `json:"rating"`
+	Verdict   string         `json:"verdict"`
+	Breakdown []Contribution `json:"breakdown,omitempty"`
 }
 
-// DefaultWeights is the built-in feature importance: security and a broken build
-// dominate, style and docs are minor, benchmarks are informational (weight 0).
-func DefaultWeights() map[string]int {
-	return map[string]int{
-		"secrets":         20,
-		"vulnerabilities": 20,
-		"build":           20,
-		"tests":           15,
-		"lint":            20, // static analysis: golangci-lint, or the go vet + gofmt fallback
-		"dependencies":    8,
-		"docs":            5,
-		"version_control": 5,
-		"benchmarks":      0,
-	}
-}
-
-// DefaultCaps is the built-in score ceiling for a failing critical feature: a
-// committed secret caps at F (a live exposure, bad regardless of dev state); a
-// reachable vulnerability caps at C (real, but often transitive and not instantly
-// fixable). A broken build deliberately has no cap, so a transient non-compiling
-// module in active development is only weighted, not graded as a failure.
-func DefaultCaps() map[string]int {
-	return map[string]int{
-		"secrets":         40,
-		"vulnerabilities": 72,
-	}
-}
-
-// Default returns the built-in grading policy.
-func Default() Config {
-	return Config{Weights: DefaultWeights(), Caps: DefaultCaps()}
-}
-
-// FromConfig starts from the built-in policy and overlays any operator-provided
-// weights and caps key-by-key, so a config that tweaks one weight keeps the
-// defaults for the rest.
-func FromConfig(weights, caps map[string]int) Config {
-	cfg := Default()
-	for k, v := range weights {
-		cfg.Weights[k] = v
-	}
-	for k, v := range caps {
-		cfg.Caps[k] = v
-	}
-	return cfg
+// Contribution is one graded check's effect on the score: its outcome, the weight it
+// carried, the points it scored (Pass=100, Warn=50, Fail=0), and Deduction, the
+// points it cost the final average versus a clean pass. A failing capped check also
+// reports the Cap it imposed and whether that cap was Binding (the ceiling that
+// actually lowered the grade). Sorted by Deduction so the biggest culprit reads first.
+type Contribution struct {
+	Feature   string  `json:"feature"`
+	Outcome   string  `json:"outcome"`
+	Weight    int     `json:"weight"`
+	Points    float64 `json:"points"`
+	Deduction float64 `json:"deduction"`
+	Cap       *int    `json:"cap,omitempty"`
+	Binding   bool    `json:"binding,omitempty"`
 }
 
 // Evaluate computes the grade as a weighted average of per-check scores (Pass=100,
-// Warn=50, Fail=0), excluding skipped and zero-weight checks, then applies any cap
-// a failing critical feature triggers. With nothing weighted to grade, the score is
-// a perfect 100 (nothing to flag).
-func Evaluate(checks []Check, cfg Config) Result {
-	weights := cfg.Weights
-	if weights == nil {
-		weights = DefaultWeights()
-	}
-
+// Warn=50, Fail=0), excluding skipped and zero-weight checks, then lowers it to the
+// tightest ceiling any failing capped check imposes. With nothing weighted to grade,
+// the score is a perfect 100 (nothing to flag). The returned Breakdown explains the
+// result check by check.
+func Evaluate(checks []Check) Result {
 	var sum, total float64
 	for _, c := range checks {
-		w := weights[c.Feature]
-		if w <= 0 || c.Outcome == Skip {
+		if c.Weight <= 0 || c.Outcome == Skip {
 			continue
 		}
-		sum += float64(w) * outcomeScore(c.Outcome)
-		total += float64(w)
+		sum += float64(c.Weight) * outcomeScore(c.Outcome)
+		total += float64(c.Weight)
 	}
 
-	score := 100
+	raw := 100
 	if total > 0 {
-		score = int(math.Round(sum / total))
+		raw = int(math.Round(sum / total))
 	}
-	score = applyCaps(score, checks, cfg.Caps)
 
-	return Result{Score: score, Rating: ratingFor(score), Verdict: verdictFor(score)}
+	// the binding cap is the tightest ceiling a failing capped check imposes, applied
+	// only when it actually lowers the weighted average.
+	score := raw
+	for _, c := range checks {
+		if c.Outcome == Fail && c.HasCap && c.Cap < score {
+			score = c.Cap
+		}
+	}
+
+	return Result{
+		Score:     score,
+		Rating:    ratingFor(score),
+		Verdict:   verdictFor(score),
+		Breakdown: breakdown(checks, total, raw, score),
+	}
 }
 
 func outcomeScore(o Outcome) float64 {
@@ -132,22 +126,44 @@ func outcomeScore(o Outcome) float64 {
 	}
 }
 
-// applyCaps lowers the score to the tightest ceiling any failing capped feature
-// imposes, so the worst critical failure wins.
-func applyCaps(score int, checks []Check, caps map[string]int) int {
-	if caps == nil {
-		return score
+// breakdown builds the per-check explanation: one Contribution per graded check, its
+// Deduction the share of the 100-point scale it cost the average. A failing capped
+// check carries its Cap, and the tightest cap that actually lowered the grade is
+// flagged Binding. Sorted by Deduction descending, then feature for stability.
+func breakdown(checks []Check, total float64, raw, score int) []Contribution {
+	if total <= 0 {
+		return nil
 	}
+	out := make([]Contribution, 0, len(checks))
 	for _, c := range checks {
-		if c.Outcome != Fail {
+		if c.Weight <= 0 || c.Outcome == Skip {
 			continue
 		}
-		if capValue, ok := caps[c.Feature]; ok && score > capValue {
-			score = capValue
+		points := outcomeScore(c.Outcome)
+		contribution := Contribution{
+			Feature:   c.Feature,
+			Outcome:   c.Outcome.String(),
+			Weight:    c.Weight,
+			Points:    points,
+			Deduction: round2((100 - points) * float64(c.Weight) / total),
 		}
+		if c.Outcome == Fail && c.HasCap {
+			capValue := c.Cap
+			contribution.Cap = &capValue
+			contribution.Binding = score < raw && c.Cap == score
+		}
+		out = append(out, contribution)
 	}
-	return score
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Deduction != out[j].Deduction {
+			return out[i].Deduction > out[j].Deduction
+		}
+		return out[i].Feature < out[j].Feature
+	})
+	return out
 }
+
+func round2(v float64) float64 { return math.Round(v*100) / 100 }
 
 // ratingFor maps a score onto its letter grade.
 func ratingFor(score int) string {
