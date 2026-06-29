@@ -9,11 +9,12 @@ branding:
 inputs:
   version:
     description: >-
-      Release tag to install, e.g. v0.1.0. Defaults to the tag the action is pinned
-      to (uses: toaweme/care@v0.1.0), so the tag is the single source of truth. Set
-      it only when pinning to a SHA or branch.
+      Release tag to install, e.g. v0.1.0. You usually don't need to set this.
+      Each tag updates the default, so whether you pin the action to a tag or a
+      commit SHA, it installs the matching release on its own. Set it only when
+      you want a different version than that.
     required: false
-    default: ""
+    default: "v0.5.0"
   output:
     description: >-
       Path to write the JSON report to, care's own --output. Use a <name>.care.json
@@ -64,17 +65,15 @@ runs:
       shell: bash
       env:
         CARE_VERSION: ${{ inputs.version }}
-        CARE_ACTION_REF: ${{ github.action_ref }}
         CARE_VERIFY: ${{ inputs.verify }}
       run: |
         set -euo pipefail
 
-        # the tag drives everything: explicit input wins, else the ref the action
-        # was pinned to (GITHUB_ACTION_REF). github.action_ref is passed in env so
-        # it survives the action running from its own checkout.
-        ref="${CARE_VERSION:-$CARE_ACTION_REF}"
+        # the version is the 'version' input; its default is bumped to the release
+        # tag in each release commit, so a tag pin and a SHA pin read the same value.
+        ref="$CARE_VERSION"
         if [ -z "$ref" ]; then
-          echo "::error::could not determine care version: pass 'version' or pin the action to a tag" >&2
+          echo "::error::could not determine care version: pass 'version' or pin the action to a release" >&2
           exit 1
         fi
         # goreleaser tags carry a leading v in the URL path but strip it in the

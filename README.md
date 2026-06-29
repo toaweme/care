@@ -13,12 +13,11 @@
 
 ## Code and repo health
 
-`care` runs every quality, security, dependency, and test check for a repository.
-It's a shortcut for developers working in multi-repo, cross-language ecosystem scenarios.
+`care` runs every quality, security, dependency, and test check for a repo in one
+command, built for working across many repos and languages at once.
 
-Switching from language to language, maintaining good standards across everything we touch is hard.
-
-Care CLI is a guide and a helper to conform to each ecosystem's best practices. Golang for now.
+Keeping standards consistent as you switch languages is hard. `care` helps you
+follow each ecosystem's best practices. Go for now.
 
 ```shell
 care
@@ -59,9 +58,9 @@ wget -qO- https://github.com/toaweme/care/releases/download/v{v}/care_{v}_linux_
 Every release also lists the exact archive for each OS/arch on the
 [releases page](https://github.com/toaweme/care/releases).
 
-`care` shells out to a handful of tools (`golangci-lint`, `govulncheck`, `betterleaks`, plus `go`/`gofmt` from your
-toolchain). With `auto_install: true` (the default) it provisions any missing binary the moment a check needs it, via
-`brew` or `go install`; pin or disable individual tools in config.
+`care` shells out to a few tools (`golangci-lint`, `govulncheck`, `betterleaks`, plus `go`/`gofmt`). With
+`auto_install: true` (the default) it installs any missing binary on demand via `brew` or `go install`; pin or
+disable individual tools in config.
 
 ## Commands
 
@@ -120,14 +119,13 @@ care changelog --write                 # maintain CHANGELOG.md in place instead 
 
 ## GitHub Actions
 
-Use the bundled action to run `care` in a repo's CI. Pin it to an exact tag:
-the tag is the single source of truth, so it installs the matching `care` binary
-and verifies its cosign signature and SHA-256 before running.
+Use the bundled action to run `care` in CI. Pin it to a tag or a commit SHA: each
+tag carries the matching `care` version, so either pin installs the right binary
+(no `version:` input) and verifies its cosign signature and SHA-256 first.
 
-The action does one thing: install `care` and run `care status`. Three optional
-inputs modify it - `output` writes a JSON report, `publish-url` publishes it, and
-`strict` fails the job on failing checks. With none of them it just runs status and
-reports to the log:
+The action installs `care` and runs `care status`. Three optional inputs change
+that: `output` writes a JSON report, `publish-url` publishes it, and `strict` fails
+the job on failing checks. With none set, it just runs status and logs the result:
 
 ```yaml
 jobs:
@@ -139,9 +137,8 @@ jobs:
 ```
 
 Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
-origin as audience). Point `publish-url` at your own ingestion
-engine. `strict: true` fails the step when a check fails. Omit it to report without
-failing the job:
+origin as audience). Point `publish-url` at your own ingestion engine. `strict:
+true` fails the step on a failing check; omit it to report without failing the job:
 
 ```yaml
 jobs:
@@ -159,8 +156,8 @@ jobs:
           publish-url: https://ci.example.com/care      # POST the report here; omit to keep it local
 ```
 
-`care` is left on `PATH`, so any other care command is just your own step, e.g.
-`run: care get lint` to sync the lint config before the check.
+`care` stays on `PATH`, so any other care command is just your own step, e.g.
+`run: care get lint` to sync the lint config first.
 
 Inputs (none are required):
 
@@ -173,19 +170,17 @@ Inputs (none are required):
 | `verify` | Cosign signature check | `true` |
 | `dir` | Directory care runs in (care's `--cwd`), for a module in a subdirectory with its own `go.mod`. The report still lands in the workspace root | `.` |
 
-The publish endpoint receives the report JSON as the POST body with an
-`Authorization: Bearer <OIDC token>` header (token audience is the URL's origin).
-A self-hosted codeviewer exposes the same path on its own host:
-`https://<your-host>/ingest?kind=care`.
+The publish endpoint gets the report JSON as the POST body with an `Authorization:
+Bearer <OIDC token>` header (audience is the URL's origin). A self-hosted codeviewer
+exposes the same path: `https://<your-host>/ingest?kind=care`.
 
-The report stays in the workspace even when checks fail, so a failure report is
-readable without re-running care. Only the download temp dir is cleaned up. The
-`report-path` output exposes the report location for later steps, so you can
-upload it as an artifact yourself if you want one.
+The report stays in the workspace even when checks fail, so you can read a failure
+report without re-running care (only the download temp dir is cleaned up). The
+`report-path` output exposes its location for later steps, e.g. to upload it as an
+artifact.
 
-Reports stay local unless you set `publish-url` and grant `id-token: write`, in
-which case the report is POSTed there (care's hosted dashboard, or your own
-endpoint). With `publish-url` set but no `id-token: write`, publishing is skipped
+Reports stay local unless you set both `publish-url` and `id-token: write`; then
+they're POSTed there. Set `publish-url` without the token and publishing is skipped
 with a warning.
 
 Pin to an exact tag and bump it deliberately when you adopt a new release.
@@ -199,7 +194,7 @@ non-Go repo).
 |------------------|---------------------------------------------------------------------------------------------------|
 | Version control  | Uncommitted files as a worklog: per-file line delta + relative age, ordered most-recently-touched  |
 | Build            | `go build ./...`, compiler diagnostics parsed and located; any error fails                         |
-| Quality          | Golangci-lint when a `.golangci.*` governs the repo, else a `go vet` + `gofmt -l` fallback         |
+| Lint             | Golangci-lint when a `.golangci.*` governs the repo, else a `go vet` + `gofmt -l` fallback         |
 | Dependencies     | `go mod tidy` delta + replace directives + `go mod verify`; the runtime floor the graph forces     |
 | Runtime          | Compares the declared Go version against what the code needs and what deps force (informational)    |
 | Docs             | Exported-symbol doc-comment coverage via `go/ast`; warns below a configurable threshold             |
@@ -208,10 +203,9 @@ non-Go repo).
 | Secrets          | Betterleaks over the working tree and (optionally) git history                                      |
 | Vulnerabilities  | Govulncheck, called-only findings, categorized `deps`/`code`/`runtime` so toolchain CVEs don't fail |
 
-Every check rolls up into one grade. Each result is weighted, then critical failures cap the score no matter how
-green everything else is: a committed secret caps you at F, a reachable vulnerability at C. The result is a single
-score out of 100, an `A+..F` letter, and a plain `healthy / needs-attention / failing` verdict. Weights and caps are
-yours to retune.
+Every check rolls up into one grade. Results are weighted, then critical failures cap the score: a committed secret
+caps you at F, a reachable vulnerability at C. You get a score out of 100, an `A+..F` letter, and a `healthy /
+needs-attention / failing` verdict. Weights and caps are yours to retune.
 
 ## Why use care?
 
