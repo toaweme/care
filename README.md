@@ -169,6 +169,7 @@ Inputs (none are required):
 | `publish-url` | Full URL to POST the report to; empty keeps it local. Needs `id-token: write` | - |
 | `verify` | Cosign signature check | `true` |
 | `dir` | Directory care runs in (care's `--cwd`), for a module in a subdirectory with its own `go.mod`. The report still lands in the workspace root | `.` |
+| `publish-timeout` | Max seconds for each publish-report curl call (OIDC token mint and the POST) | `30` |
 
 The publish endpoint gets the report JSON as the POST body with an `Authorization:
 Bearer <OIDC token>` header (audience is the URL's origin). A self-hosted codeviewer

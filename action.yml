@@ -47,6 +47,12 @@ inputs:
       own go.mod. The report still lands at the workspace root.
     required: false
     default: "."
+  publish-timeout:
+    description: >-
+      Max seconds to wait on each publish-report curl call (OIDC token mint and
+      the POST itself), care's own --max-time. Raise it for a slow endpoint.
+    required: false
+    default: "30"
 
 outputs:
   report-path:
@@ -189,10 +195,12 @@ runs:
       env:
         CARE_PUBLISH_URL: ${{ inputs.publish-url }}
         CARE_REPORT_PATH: ${{ steps.report.outputs.report-path }}
+        CARE_PUBLISH_TIMEOUT: ${{ inputs.publish-timeout }}
       run: |
         set -euo pipefail
         url="$CARE_PUBLISH_URL"
         report="$CARE_REPORT_PATH"
+        timeout="$CARE_PUBLISH_TIMEOUT"
         # the step's if-condition already guarantees url and report-path are set;
         # this only guards the rare case where the file is missing or empty.
         if [ ! -s "$report" ]; then
@@ -206,10 +214,10 @@ runs:
         # audience is the endpoint's origin (scheme + host), which the receiver
         # validates. the URL is POSTed verbatim so any engine's path/query works.
         audience="$(printf '%s' "$url" | sed -E 's#^(https?://[^/]+).*#\1#')"
-        token="$(curl -sS \
+        token="$(curl -sS --max-time "$timeout" \
           -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
           "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${audience}" | jq -r .value)"
-        curl -fsS -X POST "$url" \
+        curl -fsS --max-time "$timeout" -X POST "$url" \
           -H "Authorization: Bearer $token" \
           --data-binary @"$report"
         printf '\nPublished care report to %s\n' "$url"
