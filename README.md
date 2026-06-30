@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.6.0 # runs `care status`
+      - uses: toaweme/care@v0.7.0 # runs `care status`
 ```
 
 Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
@@ -149,7 +149,7 @@ jobs:
       id-token: write # only for publishing
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.6.0
+      - uses: toaweme/care@v0.7.0
         with:
           strict: true                                  # fail the job, but keep the report
           output: report.care.json                      # write the JSON report (<name>.care.json)
@@ -166,9 +166,9 @@ Inputs (none are required):
 | `version` | Override the binary version, only when pinning the action to a SHA or branch | Latest |
 | `output` | Report file path, care's own `--output` (use a `<name>.care.json` name). A failing check still writes it rather than failing the step | - |
 | `strict` | `true` fails the step when a check fails, after any report is published. `false` reports without failing | `false` |
-| `publish-url` | Full URL to POST the report to; empty keeps it local. Needs `id-token: write` | - |
 | `verify` | Cosign signature check | `true` |
 | `dir` | Directory care runs in (care's `--cwd`), for a module in a subdirectory with its own `go.mod`. The report still lands in the workspace root | `.` |
+| `publish-url` | Full URL to POST the report to; empty keeps it local. Needs `id-token: write` | - |
 | `publish-timeout` | Max seconds for each publish-report curl call (OIDC token mint and the POST) | `30` |
 
 The publish endpoint gets the report JSON as the POST body with an `Authorization:
