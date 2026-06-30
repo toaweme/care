@@ -5,6 +5,17 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-06-30
+
+### Features
+
+- Per-check grading policy with score breakdown by [@iberflow](https://github.com/iberflow) in [fd554b7](https://github.com/toaweme/care/commit/fd554b74b2d53203ce8ee11e2dd82f447b54dd8a).
+
+### Documentation
+
+- Update README and action inputs by [@iberflow](https://github.com/iberflow) in [b5f7eae](https://github.com/toaweme/care/commit/b5f7eae05d19319e93a34eb371d681048145254d).
+- Bump README to 0.5.0 by [@iberflow](https://github.com/iberflow) in [f526d71](https://github.com/toaweme/care/commit/f526d7127e3875fd132f4ed7414b422a0c4decdc).
+
 ## [0.5.0] - 2026-06-29
 
 ### Refactors
@@ -134,7 +145,8 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
-[0.5.0]: https://github.com/toaweme/care/compare/v0.4.0...0.5.0
+[0.6.0]: https://github.com/toaweme/care/compare/v0.5.0...0.6.0
+[0.5.0]: https://github.com/toaweme/care/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/toaweme/care/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/toaweme/care/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/toaweme/care/compare/v0.2.0...v0.3.0
