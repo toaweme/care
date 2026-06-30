@@ -17,6 +17,7 @@ jobs:
   # lint pass on the tagged commit, independent of care's own check logic.
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -39,6 +40,7 @@ jobs:
   goreleaser:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
