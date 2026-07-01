@@ -1,10 +1,9 @@
-// Package templates ships the canonical toaweme config files (golangci, taskfile,
-// gitignore, GitHub quality + release workflows, goreleaser, licenses) as an
-// embedded filesystem so the `care setup` subcommands can write them into target
-// repos without any network dependency. Workflow templates live under
-// `.github/workflows/`; the repo kind is encoded in the filename (`*.library.yml`
-// / `*.binary.yml`). The setup file matrix maps each source to its destination
-// path (e.g. `release.binary.yml` -> `.github/workflows/release.yml`).
+// Package templates ships the canonical toaweme config files (golangci,
+// gitignore, the GitHub quality workflow) as an embedded filesystem so
+// `care get` can write them into target repos without any network dependency.
+// `.github/workflows/quality.yml` is the org's single CI gate: a Go compat
+// matrix plus the `toaweme/care` action, pinned to the release this binary
+// shipped with.
 package templates
 
 import "embed"

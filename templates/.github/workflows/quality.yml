@@ -1,0 +1,60 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # compatibility matrix: build and test across the Go versions we support, so a
+  # change that needs a newer toolchain than go.mod declares is caught here.
+  compat:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.22', '1.23', '1.24', '1.25', '1.26']
+    steps:
+      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: ${{ matrix.go }}
+
+      - run: go build ./...
+      - run: go test ./... -count=1
+
+  # care is the single quality gate: it runs build, lint, deps, runtime, docs,
+  # tests, secrets, and vulnerability checks on the latest Go, then publishes the
+  # report to the dashboard.
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # publish the report to the care dashboard
+    steps:
+      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: stable
+
+      # v0.7.0 (https://github.com/toaweme/care/releases/tag/v0.7.0)
+      - uses: toaweme/care@022f7cb2b29abbe3b5b74000027c5db0e26a5d8b
+        with:
+          version: v0.7.0                               # required when pinning to a SHA
+          strict: true                                  # fail CI on a failing check
+          output: report.care.json                      # write the JSON report
+          publish-url: https://code.toawe.me/ingest?kind=care
