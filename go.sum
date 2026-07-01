@@ -35,6 +35,8 @@ github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0t
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/toaweme/cli v0.3.2 h1:RWFATkFAun9JGYc214eE6kvbbdyKU0eNENdwtQD1CJU=
 github.com/toaweme/cli v0.3.2/go.mod h1:+Ny5EHzApMvlsgnzPiIa/yvsR5nU4oVr148/8OF4Qpc=
+github.com/toaweme/cli v0.3.3 h1:MVyGfuwTPkKXtjerCNH1o8ESZlt3GpUnFdJTLYIBMpE=
+github.com/toaweme/cli v0.3.3/go.mod h1:thSzBvRO2cg4sI+9txjG9kiGOO+Tn5COsEaP9Zh+Lwo=
 github.com/toaweme/cli/config/addons/yaml v0.2.0 h1:VxyaF/y3TzRwY+Ri4FabsbIZdwgk/6kLYM8Y6VAy+Aw=
 github.com/toaweme/cli/config/addons/yaml v0.2.0/go.mod h1:iQyQl11LxLOoCfWskHJXx1PjkXb5vDO3SD6pSDvlGnY=
 github.com/toaweme/http v0.2.1 h1:nbLmKxI+tjJ9hRwZ+A0LbmKHW3plN+9LNornHWTG798=

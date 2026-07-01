@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/toaweme/cli v0.3.2
+	github.com/toaweme/cli v0.3.3
 	github.com/toaweme/cli/config/addons/yaml v0.2.0
 	github.com/toaweme/http v0.2.1
 	golang.org/x/mod v0.37.0
