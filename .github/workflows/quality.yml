@@ -51,5 +51,4 @@ jobs:
       - uses: ./
         with:
           version: ${{ steps.rel.outputs.tag }}
-          output: report.care.json
           publish-url: https://code.toawe.me/ingest?kind=care

@@ -24,9 +24,8 @@ inputs:
     default: "v0.7.1"
   output:
     description: >-
-      Path to write the JSON report to, care's own --output. Use a <name>.care.json
-      name. A failing check still writes it rather than failing the step. Omit to
-      skip the file.
+      Path to write the JSON report to. Failing check still writes it rather than failing the step. 
+      Omit to skip the file.
     required: false
     default: ""
   strict:
@@ -183,7 +182,7 @@ runs:
         # subdir (--cwd).
         report=""; report_flags=""
         if [ -n "$CARE_OUTPUT" ] || [ -n "$CARE_PUBLISH_URL" ]; then
-          report="${CARE_OUTPUT:-report.care.json}"
+          report="${CARE_OUTPUT:-care.json}"
           report_flags="--json --stdout --output ${GITHUB_WORKSPACE}/${report}"
         fi
         echo "report-path=$report" >> "$GITHUB_OUTPUT"

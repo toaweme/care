@@ -152,7 +152,6 @@ jobs:
       - uses: toaweme/care@v0.7.1
         with:
           strict: true                                  # fail the job, but keep the report
-          output: report.care.json                      # write the JSON report (<name>.care.json)
           publish-url: https://ci.example.com/care      # POST the report here; omit to keep it local
 ```
 
