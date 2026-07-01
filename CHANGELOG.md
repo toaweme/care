@@ -9,6 +9,7 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 
 ### Features
 
+- Support install-only input to skip everything but install by [@iberflow](https://github.com/iberflow) in [40630f7](https://github.com/toaweme/care/commit/40630f73a1373417bc7104dee2f1e5927b0a5715).
 - Add timers to stdout by [@iberflow](https://github.com/iberflow) in [c650393](https://github.com/toaweme/care/commit/c65039363b4d399d0e138e52d9d78b89828f9d4c).
 
 ## [0.7.1] - 2026-07-01

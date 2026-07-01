@@ -21,7 +21,7 @@ inputs:
       commit SHA, it installs the matching release on its own. Set it only when
       you want a different version than that.
     required: false
-    default: "v0.7.1"
+    default: "v0.8.0"
   output:
     description: >-
       Path to write the JSON report to. Failing check still writes it rather than failing the step. 

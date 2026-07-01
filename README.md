@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.7.1 # runs `care status`
+      - uses: toaweme/care@v0.8.0 # runs `care status`
 ```
 
 Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
@@ -149,7 +149,7 @@ jobs:
       id-token: write # only for publishing
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.7.1
+      - uses: toaweme/care@v0.8.0
         with:
           strict: true                                  # fail the job, but keep the report
           publish-url: https://ci.example.com/care      # POST the report here; omit to keep it local
@@ -161,7 +161,7 @@ skip `care status` (and publish/gate) entirely and just get the verified binary
 onto `PATH`:
 
 ```yaml
-      - uses: toaweme/care@v0.7.1
+      - uses: toaweme/care@v0.8.0
         with:
           install-only: true
       - run: care get lint
