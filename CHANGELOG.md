@@ -5,6 +5,16 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-07-01
+
+### Fixes
+
+- Don't fail the version-control check on a clean tree with no upstream by [@iberflow](https://github.com/iberflow) in [2fea55c](https://github.com/toaweme/care/commit/2fea55ccf4ba657a42495710fefe2e7d72e196d8).
+
+### Refactors
+
+- Replace stale templates/tests.yml with the canonical quality.yml by [@iberflow](https://github.com/iberflow) in [30db7d6](https://github.com/toaweme/care/commit/30db7d692e47e40bc36e9da9b817395f6e4d45ce).
+
 ## [0.7.0] - 2026-07-01
 
 ### Features
@@ -151,8 +161,9 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
-[0.7.0]: https://github.com/toaweme/care/compare/v0.6.0...0.7.0
-[0.6.0]: https://github.com/toaweme/care/compare/v0.5.0...0.6.0
+[0.7.1]: https://github.com/toaweme/care/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/toaweme/care/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/toaweme/care/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/toaweme/care/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/toaweme/care/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/toaweme/care/compare/v0.3.0...v0.3.1

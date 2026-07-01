@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.7.0 # runs `care status`
+      - uses: toaweme/care@v0.7.1 # runs `care status`
 ```
 
 Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
@@ -149,7 +149,7 @@ jobs:
       id-token: write # only for publishing
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.7.0
+      - uses: toaweme/care@v0.7.1
         with:
           strict: true                                  # fail the job, but keep the report
           output: report.care.json                      # write the JSON report (<name>.care.json)
