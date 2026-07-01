@@ -38,9 +38,12 @@ func (f *versionControl) Run(ctx context.Context, dir string, _ care.RunOptions)
 	}
 	// no upstream (e.g. a detached-HEAD tag checkout in a release workflow) is a fact
 	// about the checkout, not a problem: with a clean tree and nothing to compare
-	// against, it's worth surfacing but must not block the build.
+	// against, there is nothing wrong to grade. Pass (not Warn) so it costs no score -
+	// the summary still renders "no upstream" from HasUpstream regardless of status,
+	// so the fact stays visible without docking a repo for a checkout it doesn't
+	// control (e.g. how goreleaser checks out a tag).
 	if len(files) == 0 && !sync.HasUpstream {
-		return care.Warn(care.VCReport{HasUpstream: false})
+		return care.Pass(care.VCReport{HasUpstream: false})
 	}
 	rf := make([]care.RepoFile, 0, len(files))
 	for _, file := range files {

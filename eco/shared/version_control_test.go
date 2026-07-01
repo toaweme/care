@@ -38,11 +38,11 @@ func initGitRepo(t *testing.T) string {
 	return dir
 }
 
-func Test_VersionControl_NoUpstream_CleanTree_Warns(t *testing.T) {
+func Test_VersionControl_NoUpstream_CleanTree_Passes(t *testing.T) {
 	dir := initGitRepo(t)
 	out := NewVersionControl().Run(context.Background(), dir, care.RunOptions{})
-	if out.Status() != care.StatusWarn {
-		t.Fatalf("expected StatusWarn for a clean tree with no upstream, got %v", out.Status())
+	if out.Status() != care.StatusOK {
+		t.Fatalf("expected StatusOK for a clean tree with no upstream, got %v", out.Status())
 	}
 }
 
