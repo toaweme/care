@@ -36,6 +36,12 @@ func (f *versionControl) Run(ctx context.Context, dir string, _ care.RunOptions)
 	if len(files) == 0 && sync.InSync() {
 		return care.Pass(care.VCReport{HasUpstream: sync.HasUpstream})
 	}
+	// no upstream (e.g. a detached-HEAD tag checkout in a release workflow) is a fact
+	// about the checkout, not a problem: with a clean tree and nothing to compare
+	// against, it's worth surfacing but must not block the build.
+	if len(files) == 0 && !sync.HasUpstream {
+		return care.Warn(care.VCReport{HasUpstream: false})
+	}
 	rf := make([]care.RepoFile, 0, len(files))
 	for _, file := range files {
 		entry := care.RepoFile{Status: file.StatusString(), Name: file.Name, Path: file.Path, Added: file.Added, Deleted: file.Deleted}
