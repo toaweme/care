@@ -3,6 +3,7 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -60,7 +61,7 @@ func renderPretty(outputs []care.Rendered, info RunInfo, opts RenderOptions) {
 		p.Section("install", DimStyle.Render(plural(len(installs), "tool", "tools")))
 		width := labelWidth(installs, func(o care.Rendered) string { return o.Tool() })
 		for _, o := range installs {
-			p.CheckRow(icon(o.Status()), o.Tool(), width, o.Summary(0))
+			p.CheckRow(icon(o.Status()), durFmt(o.DurationMs()), o.Tool(), width, o.Summary(0))
 		}
 		p.Newline()
 		headerTools = 0 // already shown as its own section
@@ -76,7 +77,7 @@ func renderPretty(outputs []care.Rendered, info RunInfo, opts RenderOptions) {
 	}
 	renderChecks(p, runs, opts)
 	if opts.Explain {
-		renderBreakdown(p, health)
+		renderBreakdown(p, health, runs)
 	}
 	p.Newline()
 }
@@ -85,8 +86,9 @@ func renderPretty(outputs []care.Rendered, info RunInfo, opts RenderOptions) {
 // weighted feature, the points it cost the score, and any cap that actually lowered
 // the grade. It reads the breakdown the rating engine already computed, so it shows
 // exactly what moved the headline number. Passing checks (zero deduction) are dropped
-// so only what bumped the score down is listed.
-func renderBreakdown(p *Pretty, h Health) {
+// so only what bumped the score down is listed. runs supplies each feature's duration,
+// since rating.Contribution (built for the JSON/score contract) does not carry timing.
+func renderBreakdown(p *Pretty, h Health, runs []care.Rendered) {
 	var dents []rating.Contribution
 	for _, c := range h.Breakdown {
 		if c.Deduction > 0 || c.Cap != nil {
@@ -95,6 +97,10 @@ func renderBreakdown(p *Pretty, h Health) {
 	}
 	if len(dents) == 0 {
 		return
+	}
+	durByFeature := make(map[string]int64, len(runs))
+	for _, o := range runs {
+		durByFeature[o.Feature()] = o.DurationMs()
 	}
 	p.Newline()
 	p.Section("grading", DimStyle.Render(fmt.Sprintf("%d/100", h.Score)))
@@ -113,7 +119,7 @@ func renderBreakdown(p *Pretty, h Health) {
 			}
 			detail += ErrorStyle.Render(ceiling)
 		}
-		p.CheckRow(outcomeIcon(c.Outcome), featureLabel(c.Feature), width, detail)
+		p.CheckRow(outcomeIcon(c.Outcome), durFmt(durByFeature[c.Feature]), featureLabel(c.Feature), width, detail)
 	}
 }
 
@@ -195,6 +201,26 @@ func vcMeta(vc *VCInfo) string {
 		parts = append(parts, relativeTime(*vc.CommittedAt))
 	}
 	return strings.Join(parts, DimStyle.Render(" · "))
+}
+
+// durFmt renders a single check's duration for the per-row duration column: tenths of a
+// second below 1s ("0.4s"), whole seconds below a minute ("12s"), and minutes:seconds beyond
+// that. Unlike formatDuration (the run's total wall-clock, which favors ms precision for sub-
+// second runs), this rounds aggressively so every value fits the row's fixed-width column.
+// Zero or negative (no timing, e.g. a skipped check) renders as "".
+func durFmt(ms int64) string {
+	if ms <= 0 {
+		return ""
+	}
+	if ms < 950 {
+		tenths := int(math.Round(float64(ms) / 100))
+		return fmt.Sprintf("0.%ds", tenths)
+	}
+	sec := int64(math.Round(float64(ms) / 1000))
+	if sec < 60 {
+		return fmt.Sprintf("%ds", sec)
+	}
+	return fmt.Sprintf("%dm%ds", sec/60, sec%60)
 }
 
 // formatDuration renders a run's wall-clock as a compact human string.
@@ -301,12 +327,15 @@ func renderCheck(p *Pretty, o care.Rendered, width int, opts RenderOptions) {
 		if summary != "" {
 			detail = "skipped: " + summary
 		}
-		p.CheckRow(icn, label, width, detail)
+		// a skipped check did no work, so its duration column stays blank rather than
+		// showing a meaningless near-zero timing.
+		p.CheckRow(icn, "", label, width, detail)
 		return
 	}
 	// the summary line always prints; expanded item rows follow beneath it. Passing
-	// checks stay collapsed (summary only) at default verbosity and expand at -v.
-	p.CheckRow(icn, label, width, summary)
+	// checks stay collapsed (summary only) at default verbosity and expand at -v. Duration
+	// shows unconditionally, independent of verbosity.
+	p.CheckRow(icn, durFmt(o.DurationMs()), label, width, summary)
 	if o.Status() == care.StatusOK && opts.Verbosity == 0 {
 		return
 	}

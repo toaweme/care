@@ -36,13 +36,19 @@ func padRight(s string, width int) string {
 	return s + strings.Repeat(" ", width-len(s))
 }
 
-// CheckRow prints a check's summary line: status icon, label, and dim detail.
-func (p *Pretty) CheckRow(icon, label string, labelWidth int, detail string) {
+// durWidth is the fixed width of the dim duration column between the icon and the label, wide
+// enough for the longest value durFmt produces in practice ("0.9s", "12s", "1m5s").
+const durWidth = 4
+
+// CheckRow prints a check's summary line: status icon, dim duration, label, and dim detail. dur
+// is a durFmt string, or "" to leave the column blank (a skipped check has no meaningful timing).
+func (p *Pretty) CheckRow(icon, dur, label string, labelWidth int, detail string) {
+	durCol := DimStyle.Render(fmt.Sprintf("%*s", durWidth, dur))
 	if detail == "" {
-		fmt.Printf("%s %s\n", icon, label)
+		fmt.Printf("%s %s %s\n", icon, durCol, label)
 		return
 	}
-	fmt.Printf("%s %s  %s\n", icon, padRight(label, labelWidth), DimStyle.Render(detail))
+	fmt.Printf("%s %s %s  %s\n", icon, durCol, padRight(label, labelWidth), DimStyle.Render(detail))
 }
 
 // subRowIndent is the fixed indent of an expanded check's item rows: enough to sit them under
