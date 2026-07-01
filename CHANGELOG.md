@@ -5,6 +5,12 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+
+- Pin action.yml default and README examples to v0.8.1 by [@iberflow](https://github.com/iberflow) in [7422959](https://github.com/toaweme/care/commit/7422959baad120259dbfd1b21c23dcd1905ba98d).
+
 ## [0.8.1] - 2026-07-01
 
 ### Fixes
@@ -186,6 +192,7 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
+[Unreleased]: https://github.com/toaweme/care/compare/v0.8.1...HEAD
 [0.8.1]: https://github.com/toaweme/care/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/toaweme/care/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/toaweme/care/compare/v0.7.0...v0.7.1
