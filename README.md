@@ -157,12 +157,22 @@ jobs:
 ```
 
 `care` stays on `PATH`, so any other care command is just your own step, e.g.
-`run: care get lint` to sync the lint config first.
+`run: care get lint` to sync the lint config first. Set `install-only: true` to
+skip `care status` (and publish/gate) entirely and just get the verified binary
+onto `PATH`:
+
+```yaml
+      - uses: toaweme/care@v0.7.1
+        with:
+          install-only: true
+      - run: care get lint
+```
 
 Inputs (none are required):
 
 | Input | Purpose | Default |
 | --- | --- | --- |
+| `install-only` | `true` installs and verifies `care`, then stops - no status run, publish, or gate. Use it when a later step just runs its own `care` command | `false` |
 | `version` | Override the binary version, only when pinning the action to a SHA or branch | Latest |
 | `output` | Report file path, care's own `--output` (use a `<name>.care.json` name). A failing check still writes it rather than failing the step | - |
 | `strict` | `true` fails the step when a check fails, after any report is published. `false` reports without failing | `false` |

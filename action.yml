@@ -7,6 +7,13 @@ branding:
   color: green
 
 inputs:
+  install-only:
+    description: >-
+      Install and verify care, then stop - skip running care status, publishing,
+      and the strict gate entirely. Use this when you only need care on PATH to
+      run your own command in a later step.
+    required: false
+    default: "false"
   version:
     description: >-
       Release tag to install, e.g. v0.1.0. You usually don't need to set this.
@@ -35,6 +42,12 @@ inputs:
       token (audience is the URL origin). Without it publishing is skipped.
     required: false
     default: ""
+  publish-timeout:
+    description: >-
+      Max seconds to wait on each publish-report curl call (OIDC token mint and
+      the POST itself), care's own --max-time. Raise it for a slow endpoint.
+    required: false
+    default: "30"
   verify:
     description: >-
       Verify the cosign signature on checksums.txt before trusting the download.
@@ -47,12 +60,6 @@ inputs:
       own go.mod. The report still lands at the workspace root.
     required: false
     default: "."
-  publish-timeout:
-    description: >-
-      Max seconds to wait on each publish-report curl call (OIDC token mint and
-      the POST itself), care's own --max-time. Raise it for a slow endpoint.
-    required: false
-    default: "30"
 
 outputs:
   report-path:
@@ -163,6 +170,7 @@ runs:
       # is kept (output) or published (publish-url); strict just needs the captured
       # exit code, so it gates without leaving a file behind. for any other care
       # command, care is already on PATH - run it in your own step.
+      if: inputs.install-only != 'true'
       shell: bash
       env:
         CARE_OUTPUT: ${{ inputs.output }}
@@ -182,7 +190,7 @@ runs:
         # capture care's exit code rather than failing now, so a failing report still
         # publishes. the gate step below re-raises it when strict is set.
         code=0
-        care --cwd "$CARE_DIR" status $report_flags --expand-install || code=$?
+        care --cwd "$CARE_DIR" status --expand-install --explain $report_flags || code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
 
     - name: Publish report
@@ -190,7 +198,7 @@ runs:
       # report file. report-path is empty when no report was written (strict-only),
       # so it gates this step without re-deriving the inputs. always() keeps a
       # failing-check report publishing before the gate fails.
-      if: always() && inputs.publish-url != '' && steps.report.outputs.report-path != ''
+      if: always() && inputs.install-only != 'true' && inputs.publish-url != '' && steps.report.outputs.report-path != ''
       shell: bash
       env:
         CARE_PUBLISH_URL: ${{ inputs.publish-url }}
@@ -225,7 +233,7 @@ runs:
     - name: Gate on failing checks
       # runs last so the report has already been published; re-raises the care exit
       # code captured during the status run.
-      if: always() && inputs.strict == 'true'
+      if: always() && inputs.install-only != 'true' && inputs.strict == 'true'
       shell: bash
       env:
         CARE_EXIT: ${{ steps.report.outputs.exit-code }}
