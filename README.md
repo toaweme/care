@@ -9,7 +9,7 @@
     </picture>
 </a>
 [![GitHub Tag](https://img.shields.io/github/v/tag/toaweme/care?label=Tag&color=green)](https://github.com/toaweme/care/releases)
-[![License](https://img.shields.io/badge/License-MIT-blue)](/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue)](/LICENSE)
 
 ## Code and repo health
 
