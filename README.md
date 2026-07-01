@@ -52,7 +52,7 @@ go install github.com/toaweme/care/cmd/care@latest
 brew install toaweme/tap/care
 
 # binary
-wget -qO- https://github.com/toaweme/care/releases/download/v{v}/care_{v}_linux_x64.tar.gz | tar xz
+wget -qO- https://github.com/toaweme/care/releases/download/v0.8.0/care_0.8.0_linux_x64.tar.gz | tar xz
 ```
 
 Every release also lists the exact archive for each OS/arch on the
