@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -45,7 +46,7 @@ func NewGetCommand(client http.Client) *GetCommand {
 // Run fetches the source, applies placeholder substitutions, and writes the result.
 func (c *GetCommand) Run(options cli.GlobalFlags, _ cli.Unknowns) error {
 	if c.Inputs.Source == "" {
-		return fmt.Errorf("a source is required: care get <owner/repo/path> [--out <path>]")
+		return errors.New("a source is required: care get <owner/repo/path> [--out <path>]")
 	}
 
 	replacements, err := parseReplacements(c.Inputs.Replace)

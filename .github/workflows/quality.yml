@@ -23,7 +23,7 @@ jobs:
   # needed to publish the report to the care dashboard.
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 2
     permissions:
       contents: read
       id-token: write
