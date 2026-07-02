@@ -27,6 +27,26 @@ func fileExists(path string) bool {
 // it resolves them.
 var golangciConfigNames = []string{".golangci.yml", ".golangci.yaml", ".golangci.toml", ".golangci.json"}
 
+// FindGolangciConfig walks up from dir to the filesystem root looking for a
+// golangci-lint config, mirroring golangci-lint's own discovery: a config at the
+// repo root governs nested module dirs too. It returns the path of the first
+// config found and whether one governs dir.
+func FindGolangciConfig(dir string) (string, bool) {
+	for {
+		for _, name := range golangciConfigNames {
+			p := filepath.Join(dir, name)
+			if fileExists(p) {
+				return p, true
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", false
+		}
+		dir = parent
+	}
+}
+
 // hasGolangciConfig reports whether a golangci-lint config governs dir. When one
 // does, the repo delegates static analysis to golangci-lint, so the standalone
 // vet and format features step aside (golangci's govet and formatters subsume

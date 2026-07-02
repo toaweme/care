@@ -2,14 +2,13 @@ package sync
 
 import "strings"
 
-// kind is how a resolved source's bytes are obtained: read from disk, taken from
-// the embedded templates, or fetched from a remote URL.
+// kind is how a resolved source's bytes are obtained: read from disk or fetched
+// from a remote URL.
 type kind int
 
 const (
 	kindRemote kind = iota // zero value: a github/gist URL fetched over http
 	kindLocal              // a filesystem path read with os.ReadFile
-	kindEmbed              // an embedded template, bytes already in hand
 )
 
 // Source is a resolved sync source. It is provider-agnostic: the host-specific
@@ -30,9 +29,6 @@ type Source struct {
 	fillPrefix string
 	// path is the filesystem path for a local source.
 	path string
-	// name and data carry an embedded template's identity and bytes.
-	name string
-	data []byte
 }
 
 // URL is the raw URL the fetcher GETs (remote sources only).
@@ -61,8 +57,6 @@ func (s Source) String() string {
 	switch s.kind {
 	case kindLocal:
 		return s.path
-	case kindEmbed:
-		return s.name + " (embedded)"
 	case kindRemote:
 		switch {
 		case s.url != "":

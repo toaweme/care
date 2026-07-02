@@ -57,7 +57,7 @@ func Test_Resolve_Remote(t *testing.T) {
 		},
 	}
 
-	engine := NewEngine(nil, nil)
+	engine := NewEngine(nil)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := engine.Resolve(tt.spec, "")
@@ -75,7 +75,7 @@ func Test_Resolve_Remote(t *testing.T) {
 }
 
 func Test_Resolve_BareRepoFillsFile(t *testing.T) {
-	engine := NewEngine(nil, nil)
+	engine := NewEngine(nil)
 	got, err := engine.Resolve("toaweme/common", ".golangci.yml")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
@@ -92,7 +92,7 @@ func Test_Resolve_LocalPath(t *testing.T) {
 	if err := os.WriteFile(file, []byte("local: true\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	engine := NewEngine(nil, nil)
+	engine := NewEngine(nil)
 
 	// an absolute path and an existing bare name both resolve to the local file.
 	for _, spec := range []string{file, "./" + filepath.Base(file)} {
@@ -118,51 +118,25 @@ func Test_Resolve_LocalPath(t *testing.T) {
 	}
 }
 
-func Test_Resolve_EmbedByName(t *testing.T) {
-	embed := func(name string) ([]byte, error) {
-		if name != "taskfile.test.go.yml" {
-			return nil, os.ErrNotExist
-		}
-		return []byte("tasks: {}"), nil
-	}
-	engine := NewEngine(nil, embed)
-
-	src, err := engine.Resolve("taskfile.test.go.yml", "")
-	if err != nil {
-		t.Fatalf("Resolve error: %v", err)
-	}
-	if src.Provider != providerEmbed {
-		t.Fatalf("provider = %q, want embed", src.Provider)
-	}
-	got, err := engine.Bytes(t.Context(), src)
-	if err != nil {
-		t.Fatalf("Bytes error: %v", err)
-	}
-	if string(got) != "tasks: {}" {
-		t.Fatalf("unexpected embed content: %q", got)
-	}
-}
-
-func Test_Resolve_LocalShadowsEmbed(t *testing.T) {
+func Test_Resolve_LocalShadowsRemote(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "taskfile.test.go.yml"), []byte("from-disk"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "config.yml"), []byte("from-disk"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	embed := func(name string) ([]byte, error) { return []byte("from-embed"), nil }
-	engine := NewEngine(nil, embed)
+	engine := NewEngine(nil)
 
 	t.Chdir(dir)
-	src, err := engine.Resolve("taskfile.test.go.yml", "")
+	src, err := engine.Resolve("./config.yml", "")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
 	}
 	if src.Provider != providerLocal {
-		t.Fatalf("an on-disk file must shadow the embed; provider = %q", src.Provider)
+		t.Fatalf("an on-disk file must resolve locally; provider = %q", src.Provider)
 	}
 }
 
 func Test_Resolve_Errors(t *testing.T) {
-	engine := NewEngine(nil, nil)
+	engine := NewEngine(nil)
 	tests := []struct {
 		name string
 		spec string

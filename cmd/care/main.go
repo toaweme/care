@@ -21,7 +21,6 @@ import (
 	"github.com/toaweme/care/eco/shared"
 	sharedtools "github.com/toaweme/care/eco/shared/tools"
 	"github.com/toaweme/care/internal/devops/git"
-	"github.com/toaweme/care/templates"
 )
 
 var version = "0.0.0"
@@ -98,10 +97,8 @@ func run(cwd string, args []string) error {
 	app.Add("status", statusCommand)
 
 	// an empty base URL lets the fetcher GET fully-qualified raw URLs verbatim.
-	httpClient := http.NewClient(http.Config{UserAgent: "care"})
-	getCommand := NewGetCommand(httpClient, templates.FS.ReadFile)
-	app.Add("get", getCommand)
-	getCommand.Add("lint", NewGetLintCommand(httpClient, templates.FS.ReadFile, golang.ModulePath))
+	httpClient := http.NewClient(http.Config{UserAgent: "toaweme/care-" + version})
+	app.Add("get", NewGetCommand(httpClient))
 
 	app.Add("changelog", NewChangelogCommand())
 

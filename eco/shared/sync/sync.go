@@ -10,22 +10,20 @@ import (
 )
 
 // Engine syncs files into the working tree from a source spec. It owns the
-// ordered resolution chain (local filesystem, then embedded templates, then the
-// remote host providers) and the writing rules. It is the agnostic core that both
-// the generic `care setup` and the named presets call.
+// ordered resolution chain (local filesystem, then the remote host providers)
+// and the writing rules. It is the agnostic core the generic `care get` calls.
 type Engine struct {
 	fetcher   Fetcher
 	providers []Provider
 }
 
-// NewEngine builds the sync engine. embed reads bundled templates by name (nil
-// disables the embed step); fetcher pulls remote sources.
-func NewEngine(fetcher Fetcher, embed EmbedFunc) *Engine {
+// NewEngine builds the sync engine. fetcher pulls remote sources; local files
+// shadow the remote shorthand.
+func NewEngine(fetcher Fetcher) *Engine {
 	return &Engine{
 		fetcher: fetcher,
 		providers: []Provider{
 			localProvider{},
-			embedProvider{read: embed},
 			gistProvider{},
 			githubProvider{},
 		},
@@ -78,8 +76,7 @@ func (e *Engine) Resolve(spec, fillName string) (Source, error) {
 	return Source{}, fmt.Errorf("unrecognized source %q (expected a path, an embedded template name, a github/gist url, or owner/repo/path)", raw)
 }
 
-// Bytes returns a resolved source's content: read from disk, taken from the embed,
-// or fetched from its URL.
+// Bytes returns a resolved source's content: read from disk or fetched from its URL.
 func (e *Engine) Bytes(ctx context.Context, src Source) ([]byte, error) {
 	switch src.kind {
 	case kindLocal:
@@ -88,8 +85,6 @@ func (e *Engine) Bytes(ctx context.Context, src Source) ([]byte, error) {
 			return nil, fmt.Errorf("failed to read %s: %w", src, err)
 		}
 		return data, nil
-	case kindEmbed:
-		return src.data, nil
 	default:
 		return e.fetcher.Fetch(ctx, src)
 	}

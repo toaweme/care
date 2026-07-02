@@ -23,7 +23,7 @@ func Test_Engine_Sync_WritesNewFile(t *testing.T) {
 	dir := t.TempDir()
 	dst := filepath.Join(dir, "nested", ".golangci.yml")
 	fetcher := &stubFetcher{body: []byte("linters: []\n")}
-	engine := NewEngine(fetcher, nil)
+	engine := NewEngine(fetcher)
 
 	res, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst})
 	if err != nil {
@@ -47,7 +47,7 @@ func Test_Engine_Sync_SkipsExistingWithoutForce(t *testing.T) {
 	if err := os.WriteFile(dst, []byte("original"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	engine := NewEngine(&stubFetcher{body: []byte("remote")}, nil)
+	engine := NewEngine(&stubFetcher{body: []byte("remote")})
 
 	res, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst})
 	if err != nil {
@@ -68,7 +68,7 @@ func Test_Engine_Sync_ForceOverwrites(t *testing.T) {
 	if err := os.WriteFile(dst, []byte("original"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	engine := NewEngine(&stubFetcher{body: []byte("remote")}, nil)
+	engine := NewEngine(&stubFetcher{body: []byte("remote")})
 
 	if _, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml", Dest: dst, Force: true}); err != nil {
 		t.Fatalf("Sync error: %v", err)
@@ -83,7 +83,7 @@ func Test_Engine_Sync_BareRepoFillsFilenameFromDest(t *testing.T) {
 	dir := t.TempDir()
 	dst := filepath.Join(dir, ".golangci.yml")
 	fetcher := &stubFetcher{body: []byte("x")}
-	engine := NewEngine(fetcher, nil)
+	engine := NewEngine(fetcher)
 
 	if _, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common", Dest: dst}); err != nil {
 		t.Fatalf("Sync error: %v", err)
@@ -95,7 +95,7 @@ func Test_Engine_Sync_BareRepoFillsFilenameFromDest(t *testing.T) {
 }
 
 func Test_Engine_Sync_RequiresDest(t *testing.T) {
-	engine := NewEngine(&stubFetcher{body: []byte("x")}, nil)
+	engine := NewEngine(&stubFetcher{body: []byte("x")})
 	if _, err := engine.Sync(t.Context(), Request{Spec: "toaweme/common/.golangci.yml"}); err == nil {
 		t.Fatalf("expected error for empty dest")
 	}
