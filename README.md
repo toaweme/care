@@ -52,7 +52,7 @@ go install github.com/toaweme/care/cmd/care@latest
 brew install toaweme/tap/care
 
 # binary
-wget -qO- https://github.com/toaweme/care/releases/download/v0.8.2/care_0.8.2_linux_x64.tar.gz | tar xz
+wget -qO- https://github.com/toaweme/care/releases/download/v0.9.0/care_0.9.0_linux_x64.tar.gz | tar xz
 ```
 
 Every release also lists the exact archive for each OS/arch on the
@@ -78,20 +78,25 @@ Run the selected checks against the current repo and render the result.
 
 ### `care get`
 
-Sync a canonical config file into the current repo, from a bundled preset or any remote source. It decouples
-*which file goes where* from *where the bytes come from*.
+Fetch a config file into the current repo from any source and, optionally, rewrite placeholder tokens on
+the way in. It decouples *which file goes where* from *where the bytes come from*.
 
 ```sh
-care get lint                       # write the canonical .golangci.yml (module prefix expanded)
-care get lint -f owner/repo         # sync .golangci.yml from a repo, verbatim
-care get --from owner/repo/path/x.yml --out config/x.yml   # pull any file
-care get lint --force               # overwrite an existing, governed config
+care get toaweme/care/templates/.golangci.yml                                        # pull a file, write ./.golangci.yml
+care get toaweme/care/templates/.golangci.yml --out config/x.yml                     # choose the destination
+care get owner/repo/path/LICENSE -r __YEAR__=2027 -r '__HOLDER__=toawe.me Authors'   # rewrite tokens
+care get ./local/x.yml --force                                                       # overwrite an existing file
 ```
 
+The source is the first positional argument; `--out` defaults to the source's filename. Pass `-r token=value`
+to replace every occurrence of `token` in the fetched bytes; repeat `-r` for each replacement. Each pair splits
+on the first `=`, so the **value** may contain any character (spaces, `;`, `,`, `=`, quotes) as long as your
+shell passes it as one argument; the **token** may not contain `=`. If a token starts with `-`, use the glued
+form `-r=token=value`.
+
 Sources resolve in this order:
-- **local file** (`./`, `~`, `file://`, or any existing path) 
-- **bundled template** (a bare name matching an embedded care config)
-- **remote** (a real `github.com`/`raw.githubusercontent.com`/gist URL, or the`owner/repo[/path]` shorthand). 
+- **local file** (`./`, `~`, `file://`, or any existing path)
+- **remote** (a real `github.com`/`raw.githubusercontent.com`/gist URL, or the `owner/repo[/path]` shorthand).
  
 Local and embedded sources are zero-network, a remote fetch is an explicit.
 
@@ -133,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.8.2 # runs `care status`
+      - uses: toaweme/care@v0.9.0 # runs `care status`
 ```
 
 Publishing needs `id-token: write` (a GitHub OIDC token is minted with the URL's
@@ -149,22 +154,22 @@ jobs:
       id-token: write # only for publishing
     steps:
       - uses: actions/checkout@<sha>
-      - uses: toaweme/care@v0.8.2
+      - uses: toaweme/care@v0.9.0
         with:
           strict: true                                  # fail the job, but keep the report
           publish-url: https://ci.example.com/care      # POST the report here; omit to keep it local
 ```
 
 `care` stays on `PATH`, so any other care command is just your own step, e.g.
-`run: care get lint` to sync the lint config first. Set `install-only: true` to
+`run: care get toaweme/care/templates/.golangci.yml` to sync the lint config first. Set `install-only: true` to
 skip `care status` (and publish/gate) entirely and just get the verified binary
 onto `PATH`:
 
 ```yaml
-      - uses: toaweme/care@v0.8.2
+      - uses: toaweme/care@v0.9.0
         with:
           install-only: true
-      - run: care get lint
+      - run: care get toaweme/care/templates/.golangci.yml
 ```
 
 Inputs (none are required):
