@@ -75,6 +75,21 @@ brews:
     test: |
       system "#{bin}/care", "--help"
 
+scoops:
+  - name: care
+    homepage: "https://github.com/toaweme/care"
+    description: "Repository health and quality checker"
+    license: Apache-2.0
+    # the Windows analog of the brew tap: one shared bucket holds a
+    # <project>.json per project, so every toaweme tool installs as
+    # `scoop install toaweme/<project>` once the bucket is added.
+    repository:
+      owner: toaweme
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+    # don't push a manifest for pre-release tags (e.g. v1.0.0-rc1).
+    skip_upload: auto
+
 changelog:
   # keep this false. The release notes come from care's own `--release-notes`
   # file (see release.yml), which already bypasses goreleaser's commit changelog.
@@ -94,8 +109,12 @@ release:
     # go
     go install github.com/toaweme/care/cmd/care@{{ .Tag }}
 
-    # homebrew
+    # homebrew (macos/linux)
     brew install toaweme/tap/care
+
+    # scoop (windows)
+    scoop bucket add toaweme https://github.com/toaweme/scoop-bucket
+    scoop install toaweme/care
 
     # binary (linux x64; swap os/arch as needed)
     wget -qO- https://github.com/toaweme/care/releases/download/{{ .Tag }}/care_{{ .Version }}_linux_x64.tar.gz | tar xz
