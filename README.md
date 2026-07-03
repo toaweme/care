@@ -48,7 +48,7 @@ One command, every check, one grade. Run it before you push, in CI, or on a time
 # go
 go install github.com/toaweme/care/cmd/care@latest
 
-# homebrew (macos/linux)
+# homebrew (macos)
 brew install toaweme/tap/care
 
 # scoop (windows)
