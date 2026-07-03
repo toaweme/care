@@ -5,6 +5,16 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-07-03
+
+### Features
+
+- Publish Windows builds via Scoop, installable with `scoop install toaweme/care` by [@iberflow](https://github.com/iberflow) in [ce9f563](https://github.com/toaweme/care/commit/ce9f5636b8324bea05a81e4f768ab4399d57dd75).
+
+### Chores & Other
+
+- Switch Homebrew distribution from formula to cask; `brew install toaweme/tap/care` is unchanged on macOS by [@iberflow](https://github.com/iberflow) in [a73dfbf](https://github.com/toaweme/care/commit/a73dfbf934cf513c4b4491581538dec6f43f8392).
+
 ## [0.9.0] - 2026-07-02
 
 ### Features
