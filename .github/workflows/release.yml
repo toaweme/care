@@ -32,7 +32,7 @@ jobs:
       - run: go test ./... -race
 
       - name: golangci-lint
-        # v9.2.1 (https://github.com/golangci/golangci-lint-action/releases/tag/v9.2.1)
+        # v9.3.0 (https://github.com/golangci/golangci-lint-action/releases/tag/v9.3.0)
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
         with:
           version: ${{ env.GOLANGCI_VERSION }}
@@ -74,7 +74,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # v7.2.2 (https://github.com/goreleaser/goreleaser-action/releases/tag/v7.2.2)
+      # v7.2.3 (https://github.com/goreleaser/goreleaser-action/releases/tag/v7.2.3)
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94
         with:
           version: "~> v2" # lock to the GoReleaser v2 line; v3 won't silently break the run
