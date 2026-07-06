@@ -32,7 +32,7 @@ jobs:
           # read commit messages via the API so we never check out untrusted PR code.
           # a commit passes if any line reads exactly "Signed-off-by: Name <email>".
           missing=$(gh api "repos/$REPO/pulls/$PR/commits" --paginate \
-            --jq '.[] | select((.commit.message | test("^Signed-off-by: .+ <.+@.+>$")) | not) | "\(.sha[0:8])  \(.commit.message | split("\n")[0])"')
+            --jq '.[] | select((.commit.message | test("(?m)^Signed-off-by: .+ <.+@.+>$")) | not) | "\(.sha[0:8])  \(.commit.message | split("\n")[0])"')
 
           if [ -n "$missing" ]; then
             echo "The following commits are missing a Signed-off-by trailer:"
