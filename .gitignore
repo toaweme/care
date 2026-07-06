@@ -1,6 +1,8 @@
 **/bin/
+.DS_Store
 go.work
 go.work.sum
 TODO.md
 .env
 dist/
+governance-manual-todo.md
