@@ -21,6 +21,21 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # a SHA-pinned caller reads action.yml's version default from the tagged
+      # commit, so that default must match the tag or the action installs the
+      # wrong release. This gate makes a forgotten bump fail the release loudly
+      # instead of shipping a silent mismatch. Use scripts/prepare-release.sh to
+      # bump it as part of cutting a release.
+      - name: action.yml version default matches the release tag
+        run: |
+          want="${GITHUB_REF_NAME}"
+          got=$(grep -oE 'default: "v[0-9][^"]*"' action.yml | head -1 | sed -E 's/.*"(v[^"]*)".*/\1/')
+          if [ "$got" != "$want" ]; then
+            echo "::error file=action.yml::version input default is '$got' but the release tag is '$want' - bump it (scripts/prepare-release.sh) in the release commit, then re-tag" >&2
+            exit 1
+          fi
+          echo "action.yml version default matches $want"
+
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
