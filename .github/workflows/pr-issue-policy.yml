@@ -45,11 +45,9 @@ jobs:
           # every incoming PR gets a triage marker so maintainers can review the queue
           # this is also where suspected spam or low-effort ("slop") PRs are handled
           # labelling stays manual because that judgment cannot be automated reliably
-          
-          # create the labels first so add-label never fails on a fresh repo.
-          gh label create needs-triage --repo "$REPO" --color BFD4F2 --description "Awaiting maintainer triage" 2>/dev/null || true
-          gh label create needs-approved-issue --repo "$REPO" --color D93F0B --description "PR opened without a maintainer-approved issue" 2>/dev/null || true
-          gh label create approved --repo "$REPO" --color 0E8A16 --description "Approach approved by a maintainer, ready for a PR" 2>/dev/null || true
+          #
+          # labels are provisioned once by the bootstrap-labels workflow, so this
+          # add-label is a no-op (|| true) on a repo that has not been prepped yet.
           gh pr edit "$PR" --repo "$REPO" --add-label needs-triage || true
 
           # maintainers and bots are exempt from the issue-first gate.
