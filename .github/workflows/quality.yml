@@ -28,17 +28,14 @@ jobs:
       contents: read
       id-token: write
     steps:
-      # v7.0.0 (https://github.com/actions/checkout/releases/tag/v7.0.0)
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      # v6.5.0 (https://github.com/actions/setup-go/releases/tag/v6.5.0)
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
 
       - name: golangci-lint
-        # v9.3.0 (https://github.com/golangci/golangci-lint-action/releases/tag/v9.3.0)
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: ${{ env.GOLANGCI_VERSION }}
 
