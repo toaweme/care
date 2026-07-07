@@ -39,7 +39,16 @@ else
   echo "bumped action.yml version default: $current -> $tag"
 fi
 
-git add action.yml
+# stage the CHANGELOG.md section for this version. --release labels the untagged
+# range as $tag. care reads a git-host token from GH_TOKEN/GITHUB_TOKEN to resolve
+# author handles and degrades to plain git-log notes without one.
+if command -v gh >/dev/null 2>&1 && [ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]; then
+  GH_TOKEN="$(gh auth token 2>/dev/null || true)"; export GH_TOKEN
+fi
+go run ./cmd/care changelog --write --release "$tag"
+echo "updated CHANGELOG.md for $tag"
+
+git add action.yml CHANGELOG.md
 git commit -m "chore: release $tag"
 git tag -a "$tag" -m "$tag"
 
