@@ -5,6 +5,30 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-07-07
+
+### Fixes
+
+- Refresh care get template to v0.9.2 commit pin with inline version comments by [@iberflow](https://github.com/iberflow) in [c9b9680](https://github.com/toaweme/care/commit/c9b96800f2d1bcacb0e8ff989cbeac6247811956).
+- Restore (?m) so DCO matches trailers on multi-line messages by [@iberflow](https://github.com/iberflow) in [0e5fadd](https://github.com/toaweme/care/commit/0e5fadd48f86ba8870c2f42846e40aa4ff5b86fc).
+
+### Documentation
+
+- Add Contributing section to README by [@iberflow](https://github.com/iberflow) in [7a1a267](https://github.com/toaweme/care/commit/7a1a26751929b79080865473a3d4bfd7a6c0ecbd).
+
+### CI & Build
+
+- Gate release on action.yml version default, add prepare-release script by [@iberflow](https://github.com/iberflow) in [68ed794](https://github.com/toaweme/care/commit/68ed794e159feb098c03c7d1152b805f81d731cb).
+- Move action version to inline comment so dependabot maintains it by [@iberflow](https://github.com/iberflow) in [3962a87](https://github.com/toaweme/care/commit/3962a870a33c620c30e38f92563f3f36f6258c9c).
+- Refresh pinned action version comments to match dependabot bumps by [@iberflow](https://github.com/iberflow) in [4c18435](https://github.com/toaweme/care/commit/4c184352757e0f05d4a3063bdd5aea07ff85e4ba).
+- Bootstrap-labels workflow by [@iberflow](https://github.com/iberflow) in [b822a6b](https://github.com/toaweme/care/commit/b822a6bc9880f18cbc52c999a648e2519ca94d30).
+
+### Chores & Other
+
+- Release v0.9.3 by [@iberflow](https://github.com/iberflow) in [8c58390](https://github.com/toaweme/care/commit/8c5839056d7aeea9ffb5fb513bed9f9b9797e0d8).
+- Bump the actions-minor group with 2 updates by [@dependabot[bot]](https://github.com/dependabot[bot]) in [cd40bc7](https://github.com/toaweme/care/commit/cd40bc7ca2d09c005e1a6b9babe3aa74b7422675).
+- Add community governance (issue-first, DCO, templates) by [@iberflow](https://github.com/iberflow) in [aa9b7b4](https://github.com/toaweme/care/commit/aa9b7b4fab646b33f7111b380f82a3396fc695ca).
+
 ## [0.9.2] - 2026-07-03
 
 ### Features
@@ -214,6 +238,9 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
+[0.9.3]: https://github.com/toaweme/care/compare/v0.9.2...v0.9.3
+[0.9.2]: https://github.com/toaweme/care/compare/v0.9.1...v0.9.2
+[0.9.1]: https://github.com/toaweme/care/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/toaweme/care/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/toaweme/care/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/toaweme/care/compare/v0.8.0...v0.8.1
