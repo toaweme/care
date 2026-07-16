@@ -42,7 +42,7 @@ func (e *Engine) commits(ctx context.Context, from, to string) ([]Commit, error)
 		// the local history can't cover the range (typically a shallow clone), so
 		// let the host enumerate it instead of failing outright.
 		if e.host != nil {
-			if cs, hostErr := e.host.CompareCommits(ctx, from, to); hostErr == nil {
+			if cs, hostErr := e.host.CompareCommits(ctx, from, e.hostRef(ctx, to)); hostErr == nil {
 				for i := range cs {
 					Parse(&cs[i])
 				}
@@ -57,12 +57,29 @@ func (e *Engine) commits(ctx context.Context, from, to string) ([]Commit, error)
 	return local, nil
 }
 
+// hostRef maps a local ref to one the host can resolve. HEAD is meaningful only
+// locally: a host resolves it to its own default branch, so a feature-branch
+// checkout would be compared against main instead of itself. Naming the current
+// branch asks the host for the range the caller actually meant, which resolves
+// once the branch is pushed. A detached HEAD has no branch to name and degrades
+// to the ref as given.
+func (e *Engine) hostRef(ctx context.Context, ref string) string {
+	if ref != "HEAD" {
+		return ref
+	}
+	branch, err := e.git.BranchName(ctx, ref)
+	if err != nil || branch == "" {
+		return ref
+	}
+	return branch
+}
+
 // enrichHandles fills in host author handles on the local commits, matched by
 // commit hash. It is best-effort: the host compare only sees commits pushed to
 // it, so un-pushed commits keep their git author name, and any host error leaves
 // every handle blank. It never adds, drops, or reorders commits.
 func (e *Engine) enrichHandles(ctx context.Context, commits []Commit, from, to string) {
-	hosted, err := e.host.CompareCommits(ctx, from, to)
+	hosted, err := e.host.CompareCommits(ctx, from, e.hostRef(ctx, to))
 	if err != nil {
 		return
 	}

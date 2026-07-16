@@ -136,6 +136,45 @@ func Test_Engine_ExtractNotes_IncludesUnpushedBranchCommits(t *testing.T) {
 	}
 }
 
+func Test_Engine_ExtractNotes_EnrichesPushedBranchWithoutMerge(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	commit(t, dir, "ci: shared with main")
+	run(t, dir, "git", "switch", "-c", "feat/pre-release-cleanup", "-q")
+	commit(t, dir, "feat: branch feature")
+	commit(t, dir, "fix: branch fix")
+
+	git := NewGit(dir)
+	// the host resolves HEAD to main, so enrichment must name the branch instead.
+	host := &fakeHost{
+		git:           git,
+		defaultBranch: "main",
+		handles: map[string]string{
+			"ci: shared with main": "alice",
+			"feat: branch feature": "bob",
+			"fix: branch fix":      "bob",
+		},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	notes, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the branch is pushed but not merged: its commits still get their handles.
+	if !strings.Contains(notes, "- Branch feature by [@bob](") {
+		t.Errorf("branch commit lost its handle (HEAD resolved to the host default branch):\n%s", notes)
+	}
+	if !strings.Contains(notes, "- Branch fix by [@bob](") {
+		t.Errorf("branch commit lost its handle (HEAD resolved to the host default branch):\n%s", notes)
+	}
+	if !strings.Contains(notes, "- Shared with main by [@alice](") {
+		t.Errorf("shared commit lost its handle:\n%s", notes)
+	}
+}
+
 func Test_Engine_ExtractNotes_DegradesWhenGitHostFails(t *testing.T) {
 	dir := newRepo(t)
 	commit(t, dir, "feat: one")
