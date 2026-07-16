@@ -175,6 +175,31 @@ func Test_Engine_ExtractNotes_EnrichesPushedBranchWithoutMerge(t *testing.T) {
 	}
 }
 
+func Test_Engine_ExtractNotes_CompareLinkNamesBranch(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	run(t, dir, "git", "switch", "-c", "feat/pre-release-cleanup", "-q")
+	commit(t, dir, "feat: branch feature")
+
+	git := NewGit(dir)
+	host := &fakeHost{git: git, defaultBranch: "main"}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	notes, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// a bare HEAD would read as the host's default branch, describing the wrong range.
+	if !strings.Contains(notes, "**Full Changelog**: https://example.test/compare/v0.4.0...feat/pre-release-cleanup") {
+		t.Errorf("compare link did not name the branch:\n%s", notes)
+	}
+	if strings.Contains(notes, "compare/v0.4.0...HEAD") {
+		t.Errorf("compare link still points at the unresolvable HEAD:\n%s", notes)
+	}
+}
+
 func Test_Engine_ExtractNotes_DegradesWhenGitHostFails(t *testing.T) {
 	dir := newRepo(t)
 	commit(t, dir, "feat: one")

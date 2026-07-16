@@ -97,13 +97,16 @@ func (e *Engine) enrichHandles(ctx context.Context, commits []Commit, from, to s
 }
 
 // extras synthesizes the host-only notes additions, returning a zero Extras when
-// no host is configured or its calls fail (degrade to the git-log path).
+// no host is configured or its calls fail (degrade to the git-log path). The range
+// end is named for the host, so a branch checkout's compare link and contributor
+// list describe that branch rather than the host's default branch.
 func (e *Engine) extras(ctx context.Context, from, to string) Extras {
 	if e.host == nil {
 		return Extras{}
 	}
-	extras := Extras{CompareURL: e.host.CompareURL(from, to)}
-	if contributors, err := e.host.NewContributors(ctx, from, to); err == nil {
+	ref := e.hostRef(ctx, to)
+	extras := Extras{CompareURL: e.host.CompareURL(from, ref)}
+	if contributors, err := e.host.NewContributors(ctx, from, ref); err == nil {
 		extras.NewContributors = contributors
 	}
 	return extras
