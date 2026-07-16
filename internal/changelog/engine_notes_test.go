@@ -220,3 +220,48 @@ func Test_Engine_ExtractNotes_DegradesWhenGitHostFails(t *testing.T) {
 		t.Errorf("degraded notes missing commit:\n%s", notes)
 	}
 }
+
+// a shallow CI checkout lacks the range history, so the local walk fails and the
+// host must enumerate instead of the whole command erroring out.
+func Test_Engine_ExtractNotes_FallsBackToHostWhenLocalWalkFails(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+
+	git := NewGit(dir)
+	host := &fakeHost{
+		git:    git,
+		canned: []Commit{{Hash: "abc123", Subject: "feat: served by the host", Author: "Care Test"}},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	// v9.9.9 is absent locally, so git log fails the way a shallow clone does.
+	notes, err := engine.ExtractNotes(context.Background(), "v9.9.9", "HEAD", "")
+	if err != nil {
+		t.Fatalf("expected host fallback, got error: %v", err)
+	}
+	if !strings.Contains(notes, "- Served by the host") {
+		t.Errorf("notes did not fall back to host enumeration:\n%s", notes)
+	}
+}
+
+// a bare HEAD would make the host compute first-timers against its own default
+// branch, so the contributor lookup must name the branch too.
+func Test_Engine_ExtractNotes_ContributorLookupNamesBranch(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	run(t, dir, "git", "switch", "-c", "feat/work", "-q")
+	commit(t, dir, "feat: branch feature")
+
+	git := NewGit(dir)
+	host := &fakeHost{git: git, defaultBranch: "main", contributors: []string{"bob"}}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	if _, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", ""); err != nil {
+		t.Fatal(err)
+	}
+	if host.contribTo != "feat/work" {
+		t.Errorf("NewContributors got ref %q, want the branch name feat/work", host.contribTo)
+	}
+}

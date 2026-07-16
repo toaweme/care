@@ -16,12 +16,18 @@ import (
 // defaultBranch, when set, makes the host resolve HEAD to that branch the way a
 // real host does, since HEAD names the server's own default branch and never the
 // caller's checkout.
+// canned, when set, is returned verbatim instead of walking git, standing in for
+// a host that can serve a range the local checkout cannot (a shallow clone).
+// contribTo records the range end NewContributors was asked for, so a test can
+// assert which ref reached the host.
 type fakeHost struct {
 	git           *Git
 	handles       map[string]string
 	contributors  []string
 	unpushed      map[string]bool
 	defaultBranch string
+	canned        []Commit
+	contribTo     string
 	fail          bool
 }
 
@@ -31,6 +37,9 @@ func (f *fakeHost) CompareCommits(ctx context.Context, from, to string) ([]Commi
 	}
 	if to == "HEAD" && f.defaultBranch != "" {
 		to = f.defaultBranch
+	}
+	if f.canned != nil {
+		return f.canned, nil
 	}
 	commits, err := f.git.CommitsInRange(ctx, from, to)
 	if err != nil {
@@ -83,6 +92,7 @@ func (f *fakeHost) UserURL(handle string) string {
 }
 
 func (f *fakeHost) NewContributors(ctx context.Context, from, to string) ([]string, error) {
+	f.contribTo = to
 	return f.contributors, nil
 }
 
@@ -106,6 +116,19 @@ func commit(t *testing.T, dir, subject string) {
 func tag(t *testing.T, dir, name string) {
 	t.Helper()
 	run(t, dir, "git", "tag", name)
+}
+
+// revParse resolves a ref to its full hash, for tests needing a concrete commit
+// to detach onto.
+func revParse(t *testing.T, dir, ref string) string {
+	t.Helper()
+	cmd := exec.Command("git", "rev-parse", ref)
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("git rev-parse %s failed: %v", ref, err)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func run(t *testing.T, dir, name string, args ...string) {

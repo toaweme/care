@@ -357,3 +357,38 @@ func Test_Engine_InsertVersion_ThenTaggedUpdateKeepsItVerbatim(t *testing.T) {
 		t.Errorf("tagged Update changed the staged section:\nstaged:\n%s\ngot:\n%s", staged, out)
 	}
 }
+
+// the --release path is what cuts a real release, so it must see branch commits
+// the same way the notes path does.
+func Test_Engine_InsertVersion_IncludesBranchCommits(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	commit(t, dir, "ci: shared with main")
+	run(t, dir, "git", "switch", "-c", "feat/pre-release-cleanup", "-q")
+	commit(t, dir, "feat: branch feature")
+	commit(t, dir, "fix: branch fix")
+
+	git := NewGit(dir)
+	host := &fakeHost{
+		git:           git,
+		defaultBranch: "main",
+		handles:       map[string]string{"feat: branch feature": "bob"},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	out, err := engine.InsertVersion(context.Background(), "v0.4.0", "HEAD", "v0.5.0", "2026-07-16", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"- Branch feature", "- Branch fix", "- Shared with main"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("staged release dropped %q:\n%s", want, out)
+		}
+	}
+	// the branch is pushed but unmerged, so its handles still resolve.
+	if !strings.Contains(out, "- Branch feature by [@bob](") {
+		t.Errorf("staged release lost the branch handle:\n%s", out)
+	}
+}
