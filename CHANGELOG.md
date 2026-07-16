@@ -5,6 +5,32 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-07-16
+
+### Features
+
+- New demo videos by [@iberflow](https://github.com/iberflow) in [3fb7a25](https://github.com/toaweme/care/commit/3fb7a25633921a25bb47fe38a1c87ca31faf924e).
+
+### Fixes
+
+- Name the branch in the changelog compare link and contributor list by [@iberflow](https://github.com/iberflow) in [884d2f0](https://github.com/toaweme/care/commit/884d2f0e1702761f47e29dc4dc5f7a5e63618aea).
+- Changelog author handles resolve on an unmerged branch by [@iberflow](https://github.com/iberflow) in [aecd168](https://github.com/toaweme/care/commit/aecd168e76a532e0c6a8ccf388a845971a4d1677).
+- Include unmerged branch commits in changelog ranges by [@iberflow](https://github.com/iberflow) in [5ecfb46](https://github.com/toaweme/care/commit/5ecfb46d5f38ade286a215a5bc5860335992f026).
+- Update pinned care action to v0.9.3 in templates/quality.yml, drop version input by [@iberflow](https://github.com/iberflow) in [5d4e1d3](https://github.com/toaweme/care/commit/5d4e1d30158258bbaf5cd04da9d24db5a9c094fc).
+
+### Documentation
+
+- Changelog for v0.9.3 by [@iberflow](https://github.com/iberflow) in [710c6d4](https://github.com/toaweme/care/commit/710c6d4bb74e4ea7780ac1298eeb30015b075047).
+
+### Tests
+
+- Cover branch, detached HEAD, and shallow-clone changelog paths by [@iberflow](https://github.com/iberflow) in [5084851](https://github.com/toaweme/care/commit/5084851594af458c1cd16913e06821a32222d850).
+
+### CI & Build
+
+- Publish code.json via codereport action by [@iberflow](https://github.com/iberflow) in [#3](https://github.com/toaweme/care/pull/3).
+- Write CHANGELOG.md in prepare-release so releases never miss it by [@iberflow](https://github.com/iberflow) in [43b985a](https://github.com/toaweme/care/commit/43b985a272e90bbf1fa371421ae80c688a3303a0).
+
 ## [0.9.3] - 2026-07-07
 
 ### Fixes
@@ -238,6 +264,7 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
+[0.9.4]: https://github.com/toaweme/care/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/toaweme/care/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/toaweme/care/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/toaweme/care/compare/v0.9.0...v0.9.1
