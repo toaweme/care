@@ -100,6 +100,106 @@ func Test_Engine_ExtractNotes_GitHost(t *testing.T) {
 	}
 }
 
+func Test_Engine_ExtractNotes_IncludesUnpushedBranchCommits(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	// only this commit is pushed to the host; the rest live on a local branch the
+	// host's compare API can't see.
+	commit(t, dir, "ci: shared with main")
+	commit(t, dir, "feat: local only feature")
+	commit(t, dir, "fix: local only fix")
+
+	git := NewGit(dir)
+	host := &fakeHost{
+		git:      git,
+		handles:  map[string]string{"ci: shared with main": "alice"},
+		unpushed: map[string]bool{"feat: local only feature": true, "fix: local only fix": true},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	// the range end is the local HEAD, which the host can't resolve; the local git
+	// walk is the source of truth, so every branch commit must appear.
+	notes, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(notes, "- Local only feature") || !strings.Contains(notes, "- Local only fix") {
+		t.Errorf("notes dropped un-pushed branch commits (the host-shadowing bug):\n%s", notes)
+	}
+	if !strings.Contains(notes, "- Shared with main") {
+		t.Errorf("notes dropped the shared commit:\n%s", notes)
+	}
+	// the shared, pushed commit still gets its host handle; the un-pushed ones don't.
+	if !strings.Contains(notes, "by [@alice](") {
+		t.Errorf("notes lost host handle enrichment for the pushed commit:\n%s", notes)
+	}
+}
+
+func Test_Engine_ExtractNotes_EnrichesPushedBranchWithoutMerge(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	commit(t, dir, "ci: shared with main")
+	run(t, dir, "git", "switch", "-c", "feat/pre-release-cleanup", "-q")
+	commit(t, dir, "feat: branch feature")
+	commit(t, dir, "fix: branch fix")
+
+	git := NewGit(dir)
+	// the host resolves HEAD to main, so enrichment must name the branch instead.
+	host := &fakeHost{
+		git:           git,
+		defaultBranch: "main",
+		handles: map[string]string{
+			"ci: shared with main": "alice",
+			"feat: branch feature": "bob",
+			"fix: branch fix":      "bob",
+		},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	notes, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the branch is pushed but not merged: its commits still get their handles.
+	if !strings.Contains(notes, "- Branch feature by [@bob](") {
+		t.Errorf("branch commit lost its handle (HEAD resolved to the host default branch):\n%s", notes)
+	}
+	if !strings.Contains(notes, "- Branch fix by [@bob](") {
+		t.Errorf("branch commit lost its handle (HEAD resolved to the host default branch):\n%s", notes)
+	}
+	if !strings.Contains(notes, "- Shared with main by [@alice](") {
+		t.Errorf("shared commit lost its handle:\n%s", notes)
+	}
+}
+
+func Test_Engine_ExtractNotes_CompareLinkNamesBranch(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	run(t, dir, "git", "switch", "-c", "feat/pre-release-cleanup", "-q")
+	commit(t, dir, "feat: branch feature")
+
+	git := NewGit(dir)
+	host := &fakeHost{git: git, defaultBranch: "main"}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	notes, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// a bare HEAD would read as the host's default branch, describing the wrong range.
+	if !strings.Contains(notes, "**Full Changelog**: https://example.test/compare/v0.4.0...feat/pre-release-cleanup") {
+		t.Errorf("compare link did not name the branch:\n%s", notes)
+	}
+	if strings.Contains(notes, "compare/v0.4.0...HEAD") {
+		t.Errorf("compare link still points at the unresolvable HEAD:\n%s", notes)
+	}
+}
+
 func Test_Engine_ExtractNotes_DegradesWhenGitHostFails(t *testing.T) {
 	dir := newRepo(t)
 	commit(t, dir, "feat: one")
@@ -118,5 +218,50 @@ func Test_Engine_ExtractNotes_DegradesWhenGitHostFails(t *testing.T) {
 	// commit enrichment falls back to git-log; the section is still produced.
 	if !strings.Contains(notes, "- Two") {
 		t.Errorf("degraded notes missing commit:\n%s", notes)
+	}
+}
+
+// a shallow CI checkout lacks the range history, so the local walk fails and the
+// host must enumerate instead of the whole command erroring out.
+func Test_Engine_ExtractNotes_FallsBackToHostWhenLocalWalkFails(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+
+	git := NewGit(dir)
+	host := &fakeHost{
+		git:    git,
+		canned: []Commit{{Hash: "abc123", Subject: "feat: served by the host", Author: "Care Test"}},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	// v9.9.9 is absent locally, so git log fails the way a shallow clone does.
+	notes, err := engine.ExtractNotes(context.Background(), "v9.9.9", "HEAD", "")
+	if err != nil {
+		t.Fatalf("expected host fallback, got error: %v", err)
+	}
+	if !strings.Contains(notes, "- Served by the host") {
+		t.Errorf("notes did not fall back to host enumeration:\n%s", notes)
+	}
+}
+
+// a bare HEAD would make the host compute first-timers against its own default
+// branch, so the contributor lookup must name the branch too.
+func Test_Engine_ExtractNotes_ContributorLookupNamesBranch(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	run(t, dir, "git", "branch", "-M", "main")
+	run(t, dir, "git", "switch", "-c", "feat/work", "-q")
+	commit(t, dir, "feat: branch feature")
+
+	git := NewGit(dir)
+	host := &fakeHost{git: git, defaultBranch: "main", contributors: []string{"bob"}}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	if _, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", ""); err != nil {
+		t.Fatal(err)
+	}
+	if host.contribTo != "feat/work" {
+		t.Errorf("NewContributors got ref %q, want the branch name feat/work", host.contribTo)
 	}
 }

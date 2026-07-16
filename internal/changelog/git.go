@@ -66,6 +66,23 @@ func (g *Git) PreviousTag(ctx context.Context, ref string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// BranchName returns the branch that ref points at, or "" when it points at no
+// branch (a detached HEAD, as in a CI tag build). It is how a local-only ref like
+// HEAD is translated into a name a git host can resolve, since a host reads HEAD
+// as its own default branch rather than the caller's checkout.
+func (g *Git) BranchName(ctx context.Context, ref string) (string, error) {
+	out, err := g.run(ctx, "rev-parse", "--abbrev-ref", ref)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve branch name for %q: %w", ref, err)
+	}
+	name := strings.TrimSpace(out)
+	// a detached HEAD abbreviates back to "HEAD", meaning no branch to name.
+	if name == "HEAD" {
+		return "", nil
+	}
+	return name, nil
+}
+
 // CommitsInRange returns the commits in (from, to], newest first, parsed for
 // their conventional fields. Author is the git author name (the host-neutral
 // identity); no handle is set. from is "" to include every commit reachable from
