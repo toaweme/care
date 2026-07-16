@@ -28,19 +28,55 @@ func Semver(tag string) string {
 	return strings.TrimPrefix(tag, "v")
 }
 
-// commits reads the range (from, to], host-enriched when a host is configured
-// and reachable, falling back to the git-log backend on any host failure. The
-// returned commits are always parsed for their conventional fields.
+// commits reads the range (from, to] from the local git backend, which is the
+// source of truth for what is in range: it sees the working checkout, including
+// branch commits not yet pushed to the host. When a host is configured it only
+// enriches those commits with author handles, a best-effort pass that never
+// changes which commits are returned. If the local walk fails (a shallow CI
+// checkout missing the range's history), it falls back to the host's own
+// enumeration, which can resolve the range server-side. The returned commits are
+// always parsed for their conventional fields.
 func (e *Engine) commits(ctx context.Context, from, to string) ([]Commit, error) {
-	if e.host != nil {
-		if cs, err := e.host.CompareCommits(ctx, from, to); err == nil {
-			for i := range cs {
-				Parse(&cs[i])
+	local, err := e.git.CommitsInRange(ctx, from, to)
+	if err != nil {
+		// the local history can't cover the range (typically a shallow clone), so
+		// let the host enumerate it instead of failing outright.
+		if e.host != nil {
+			if cs, hostErr := e.host.CompareCommits(ctx, from, to); hostErr == nil {
+				for i := range cs {
+					Parse(&cs[i])
+				}
+				return cs, nil
 			}
-			return cs, nil
+		}
+		return nil, err
+	}
+	if e.host != nil {
+		e.enrichHandles(ctx, local, from, to)
+	}
+	return local, nil
+}
+
+// enrichHandles fills in host author handles on the local commits, matched by
+// commit hash. It is best-effort: the host compare only sees commits pushed to
+// it, so un-pushed commits keep their git author name, and any host error leaves
+// every handle blank. It never adds, drops, or reorders commits.
+func (e *Engine) enrichHandles(ctx context.Context, commits []Commit, from, to string) {
+	hosted, err := e.host.CompareCommits(ctx, from, to)
+	if err != nil {
+		return
+	}
+	handles := make(map[string]string, len(hosted))
+	for _, c := range hosted {
+		if c.Handle != "" {
+			handles[c.Hash] = c.Handle
 		}
 	}
-	return e.git.CommitsInRange(ctx, from, to)
+	for i := range commits {
+		if h, ok := handles[commits[i].Hash]; ok {
+			commits[i].Handle = h
+		}
+	}
 }
 
 // extras synthesizes the host-only notes additions, returning a zero Extras when

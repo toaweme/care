@@ -10,11 +10,14 @@ import (
 )
 
 // fakeHost is a deterministic in-memory GitHost for exercising the enrich/extras
-// paths without a network. handles maps a commit subject to an author handle.
+// paths without a network. handles maps a commit subject to an author handle;
+// unpushed lists subjects the host can't see (commits not yet pushed to it), which
+// the compare API drops just as GitHub does for un-pushed branch commits.
 type fakeHost struct {
 	git          *Git
 	handles      map[string]string
 	contributors []string
+	unpushed     map[string]bool
 	fail         bool
 }
 
@@ -26,10 +29,15 @@ func (f *fakeHost) CompareCommits(ctx context.Context, from, to string) ([]Commi
 	if err != nil {
 		return nil, err
 	}
-	for i := range commits {
-		commits[i].Handle = f.handles[commits[i].Subject]
+	visible := commits[:0]
+	for _, c := range commits {
+		if f.unpushed[c.Subject] {
+			continue
+		}
+		c.Handle = f.handles[c.Subject]
+		visible = append(visible, c)
 	}
-	return commits, nil
+	return visible, nil
 }
 
 func (f *fakeHost) CompareURL(from, to string) string {

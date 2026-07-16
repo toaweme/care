@@ -100,6 +100,42 @@ func Test_Engine_ExtractNotes_GitHost(t *testing.T) {
 	}
 }
 
+func Test_Engine_ExtractNotes_IncludesUnpushedBranchCommits(t *testing.T) {
+	dir := newRepo(t)
+	commit(t, dir, "feat: one")
+	tag(t, dir, "v0.4.0")
+	// only this commit is pushed to the host; the rest live on a local branch the
+	// host's compare API can't see.
+	commit(t, dir, "ci: shared with main")
+	commit(t, dir, "feat: local only feature")
+	commit(t, dir, "fix: local only fix")
+
+	git := NewGit(dir)
+	host := &fakeHost{
+		git:      git,
+		handles:  map[string]string{"ci: shared with main": "alice"},
+		unpushed: map[string]bool{"feat: local only feature": true, "fix: local only fix": true},
+	}
+	engine := NewEngine(git, host, DefaultGroups, false)
+
+	// the range end is the local HEAD, which the host can't resolve; the local git
+	// walk is the source of truth, so every branch commit must appear.
+	notes, err := engine.ExtractNotes(context.Background(), "v0.4.0", "HEAD", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(notes, "- Local only feature") || !strings.Contains(notes, "- Local only fix") {
+		t.Errorf("notes dropped un-pushed branch commits (the host-shadowing bug):\n%s", notes)
+	}
+	if !strings.Contains(notes, "- Shared with main") {
+		t.Errorf("notes dropped the shared commit:\n%s", notes)
+	}
+	// the shared, pushed commit still gets its host handle; the un-pushed ones don't.
+	if !strings.Contains(notes, "by [@alice](") {
+		t.Errorf("notes lost host handle enrichment for the pushed commit:\n%s", notes)
+	}
+}
+
 func Test_Engine_ExtractNotes_DegradesWhenGitHostFails(t *testing.T) {
 	dir := newRepo(t)
 	commit(t, dir, "feat: one")
