@@ -19,6 +19,8 @@ command, built for working across many repos and languages at once.
 Keeping standards consistent as you switch languages is hard. `care` helps you
 follow each ecosystem's best practices. Go for now.
 
+**[Documentation](https://toawe.me/docs/care)** | [toawe.me](https://toawe.me)
+
 <p align="center">
     <img src=".github/demo.gif" alt="blink demo discovering and running services" width="900">
 </p>
