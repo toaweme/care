@@ -45,7 +45,7 @@ jobs:
 
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: stable
+          go-version: '1.26'
 
       - uses: toaweme/care@8c5839056d7aeea9ffb5fb513bed9f9b9797e0d8 # v0.9.3
         with:
