@@ -206,7 +206,9 @@ artifact.
 
 Reports stay local unless you set both `publish-url` and `id-token: write`; then
 they're POSTed there. Set `publish-url` without the token and publishing is skipped
-with a warning.
+with a warning. Publishing only happens on the default branch or a tag. Pull requests and
+other branches still run every check and the strict gate, they just keep the report
+local.
 
 Pin to an exact tag and bump it deliberately when you adopt a new release.
 

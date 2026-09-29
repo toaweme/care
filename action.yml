@@ -39,6 +39,8 @@ inputs:
       POST the report to this endpoint. care's hosted dashboard is
       https://code.toawe.me/ingest?kind=care. Needs id-token: write to mint the OIDC
       token (audience is the URL origin). Without it publishing is skipped.
+      Publishing only happens on the default branch or a tag, so pull requests and
+      feature branches still run the gate without reaching the dashboard.
     required: false
     default: ""
   publish-timeout:
@@ -196,8 +198,10 @@ runs:
       # publish when there is somewhere to send it and the status step produced a
       # report file. report-path is empty when no report was written (strict-only),
       # so it gates this step without re-deriving the inputs. always() keeps a
-      # failing-check report publishing before the gate fails.
-      if: always() && inputs.install-only != 'true' && inputs.publish-url != '' && steps.report.outputs.report-path != ''
+      # failing-check report publishing before the gate fails. Only the default
+      # branch and tags publish, so a dashboard tracks main and releases rather
+      # than every pull request that ran the gate.
+      if: always() && inputs.install-only != 'true' && inputs.publish-url != '' && steps.report.outputs.report-path != '' && (github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch)
       shell: bash
       env:
         CARE_PUBLISH_URL: ${{ inputs.publish-url }}
