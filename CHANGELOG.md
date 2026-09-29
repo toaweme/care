@@ -5,6 +5,21 @@ All notable changes to this project are documented here, newest first.
 Entries are generated from [Conventional Commits](https://www.conventionalcommits.org)
 and grouped by change type. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-09-29
+
+### Documentation
+
+- Link to docs site from README by [@iberflow](https://github.com/iberflow) in [2cf7745](https://github.com/toaweme/care/commit/2cf7745f52c58cfcdd2affcc8cb947f0a51d6eb9).
+
+### CI & Build
+
+- Pin quality gate to go 1.26 instead of stable by [@iberflow](https://github.com/iberflow) in [f996905](https://github.com/toaweme/care/commit/f996905887b7038f579240c9e87bee8da974960f).
+
+### Chores & Other
+
+- Bump go to 1.27 and golangci-lint to v2.14.0 by [@iberflow](https://github.com/iberflow) in [f456d56](https://github.com/toaweme/care/commit/f456d56a77d8253a5bae8e00390c92b7f17ba89f).
+- **Deps:** Bump actions/setup-go in the actions-major group by [@dependabot[bot]](https://github.com/dependabot[bot]) in [#5](https://github.com/toaweme/care/pull/5).
+
 ## [0.9.4] - 2026-07-16
 
 ### Features
@@ -264,6 +279,7 @@ and grouped by change type. This project adheres to [Semantic Versioning](https:
 - Pin goreleaser to v2 line, write formula to Formula/ by [@iberflow](https://github.com/iberflow) in [bc77248](https://github.com/toaweme/care/commit/bc77248405c1ee8e2e9404e3d382329255ead506).
 - Changelog shows @username only and keeps all commit types by [@iberflow](https://github.com/iberflow) in [7ba0f03](https://github.com/toaweme/care/commit/7ba0f0315693562ea38feef4cdedfb5be3109981).
 
+[0.9.5]: https://github.com/toaweme/care/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/toaweme/care/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/toaweme/care/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/toaweme/care/compare/v0.9.1...v0.9.2
