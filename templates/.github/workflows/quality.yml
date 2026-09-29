@@ -21,11 +21,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ['1.22', '1.23', '1.24', '1.25', '1.26']
+        go: ['1.22', '1.23', '1.24', '1.25', '1.26', '1.27']
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go }}
 
@@ -41,13 +41,13 @@ jobs:
       contents: read
       id-token: write   # publish the report to the care dashboard
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.26'
 
-      - uses: toaweme/care@8c5839056d7aeea9ffb5fb513bed9f9b9797e0d8 # v0.9.3
+      - uses: toaweme/care@e684a2e9486d28281fe12d9fdd1284aa946c2825 # v0.9.4
         with:
           strict: true                                  # fail CI on a failing check
           publish-url: https://code.toawe.me/ingest?kind=care

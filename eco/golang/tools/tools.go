@@ -10,7 +10,7 @@ import "github.com/toaweme/care"
 // when the operator configures none. It tracks the version the shipped .golangci.yml
 // is validated against (mirrored by GOLANGCI_VERSION in the CI workflow); bump both
 // together. A pin is required for the download method, which names an exact tag.
-const defaultGolangCiVersion = "v2.12.2"
+const defaultGolangCiVersion = "v2.14.0"
 
 // NewGolangCiLint builds the golangci-lint tool, pinned to version when non-empty and
 // to defaultGolangCiVersion otherwise. It installs from the verified prebuilt release
