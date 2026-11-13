@@ -62,7 +62,7 @@ jobs:
         with:
           go-version-file: go.mod   # same toolchain the gate tested with
 
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       # care generates its own conventional-commit notes (the org's single
       # source), which goreleaser then uses verbatim via --release-notes. Built
@@ -83,7 +83,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           version: "~> v2" # lock to the GoReleaser v2 line; v3 won't silently break the run
           args: release --clean --release-notes=${{ runner.temp }}/notes.md
